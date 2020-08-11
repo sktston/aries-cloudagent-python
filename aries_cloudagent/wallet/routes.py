@@ -1,6 +1,7 @@
 """Wallet admin routes."""
 
 import json
+from json import JSONDecodeError
 
 from aiohttp import web
 from aiohttp_apispec import (
@@ -27,6 +28,13 @@ class DIDSchema(Schema):
     did = fields.Str(description="DID of interest", **INDY_DID)
     verkey = fields.Str(description="Public verification key", **INDY_RAW_PUBLIC_KEY)
     public = fields.Boolean(description="Whether DID is public", example=False)
+
+
+class DIDCreateSchema(Schema):
+    """Request schema to create a DID."""
+
+    seed = fields.Str(description="Seed used for did derivation. (if not random)", required=False,
+                      example="00000000000000000000000Endorser1")
 
 
 class DIDResultSchema(Schema):
@@ -150,6 +158,7 @@ async def wallet_did_list(request: web.BaseRequest):
 
 
 @docs(tags=["wallet"], summary="Create a local DID")
+@request_schema(DIDCreateSchema)
 @response_schema(DIDResultSchema, 200)
 async def wallet_create_did(request: web.BaseRequest):
     """
@@ -166,8 +175,15 @@ async def wallet_create_did(request: web.BaseRequest):
     wallet: BaseWallet = await context.inject(BaseWallet, required=False)
     if not wallet:
         raise web.HTTPForbidden(reason="No wallet available")
+
     try:
-        info = await wallet.create_local_did()
+        body = await request.json() or {}
+        seed = body.get("seed")
+    except JSONDecodeError:
+        seed = None
+
+    try:
+        info = await wallet.create_local_did(seed=seed)
     except WalletError as err:
         raise web.HTTPBadRequest(reason=err.roll_up) from err
 
