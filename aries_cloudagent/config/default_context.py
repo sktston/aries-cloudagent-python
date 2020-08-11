@@ -81,17 +81,17 @@ class DefaultContextBuilder(ContextBuilder):
 
         context.injector.bind_provider(
             BaseLedger,
-            #CachedProvider(
-            StatsProvider(
-                LedgerProvider(),
-                (
-                    "create_and_send_credential_definition",
-                    "create_and_send_schema",
-                    "get_credential_definition",
-                    "get_schema",
-                ),
-            )
-            #),
+            CachedProvider(
+                StatsProvider(
+                    LedgerProvider(),
+                    (
+                        "create_and_send_credential_definition",
+                        "create_and_send_schema",
+                        "get_credential_definition",
+                        "get_schema",
+                    ),
+                )
+            ),
         )
         context.injector.bind_provider(
             BaseIssuer,
