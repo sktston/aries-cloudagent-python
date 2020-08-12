@@ -19,7 +19,7 @@ class LedgerProvider(BaseProvider):
         """Create and open the ledger instance."""
 
         pool_name = settings.get("ledger.pool_name", "default")
-        keepalive = int(settings.get("ledger.keepalive", 5))
+        keepalive = int(settings.get("ledger.keepalive", 0))
         read_only = bool(settings.get("ledger.read_only", False))
         if read_only:
             LOGGER.error("Note: setting ledger to read-only mode")
