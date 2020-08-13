@@ -15,4 +15,7 @@ RUN pip3 install --no-cache-dir -e .
 
 RUN mkdir logs && chown -R indy:indy logs && chmod -R ug+rw logs
 
+ADD --chown=indy:indy https://raw.githubusercontent.com/vishnubob/wait-for-it/master/wait-for-it.sh ./
+RUN chmod +x ./wait-for-it.sh
+
 ENTRYPOINT ["/bin/bash", "-c", "aca-py \"$@\"", "--"]
