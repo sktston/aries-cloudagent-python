@@ -275,7 +275,7 @@ class OutboundTransportManager:
 
         """
         transport_id = self.get_running_transport_for_endpoint(endpoint)
-        queued = QueuedOutboundMessage(None, None, None, transport_id)
+        queued = QueuedOutboundMessage(self.context, None, None, transport_id)
         queued.endpoint = f"{endpoint}/topic/{topic}/"
         queued.payload = json.dumps(payload)
         queued.state = QueuedOutboundMessage.STATE_PENDING
