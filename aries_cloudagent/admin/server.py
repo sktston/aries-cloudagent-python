@@ -330,9 +330,33 @@ class AdminServer(BaseAdminServer):
         agent_label = self.context.settings.get("default_label")
         version_string = f"v{__version__}"
 
-        setup_aiohttp_apispec(
-            app=app, title=agent_label, version=version_string, swagger_path="/api/doc"
+        # if it is the agent in k8s behind the nginx ingress
+        if agent_label == "ACA-Py Agent (Multi-Tenant)":
+            setup_aiohttp_apispec(
+                app=app, 
+                title=agent_label, 
+                version=version_string, 
+                swagger_path="/aca-py/swagger-ui", 
+                static_path="/aca-py/swagger-ui/static/swagger", 
+                url="/aca-py/swagger-ui/swagger.json", 
+                basePath="/aca-py/admin",
+                securityDefinitions={
+                    "OAuth2": {"type": "apiKey", "name": "Authorization", "in": "header"}
+                }, 
+                security=[{"OAuth2": []}] 
         )
+        else:
+            setup_aiohttp_apispec(
+                app=app, 
+                title=agent_label, 
+                version=version_string, 
+                swagger_path="/api/doc",
+                securityDefinitions={
+                    "WalletAuth": {"type": "apiKey", "name": "Wallet", "in": "header"}
+                },
+                security=[{"WalletAuth": []}]
+            )
+
         app.on_startup.append(self.on_startup)
         return app
 
