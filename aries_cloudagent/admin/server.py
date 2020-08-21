@@ -350,7 +350,7 @@ class AdminServer(BaseAdminServer):
                 app=app, 
                 title=agent_label, 
                 version=version_string, 
-                swagger_path="/api/doc"
+                swagger_path="/api/doc",
                 securityDefinitions={
                     "WalletAuth": {"type": "apiKey", "name": "Wallet", "in": "header"}
                 },
