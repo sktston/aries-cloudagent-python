@@ -132,7 +132,6 @@ class WalletHandler():
         # TODO: We need to change the requested instance so that the storage
         # provider picks up the correct wallet for fetching the connections.
         # Maybe there is a nicer way to handle this?
-        context.injector._providers[BaseWallet]._requested_instance = wallet.name
         context.settings.set_value("wallet.id", wallet.name)
 
         # Add connections of opened wallet to handler.

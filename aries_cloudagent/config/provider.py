@@ -105,7 +105,6 @@ class DynamicProvider(BaseProvider):
         self._instances = {}
         self._provider = provider
         self._configs = {}
-        self._requested_instance = None
         self._config_key = key
 
     async def provide(self,
