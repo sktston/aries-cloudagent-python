@@ -136,7 +136,9 @@ class V10CredentialCreateSchema(AdminAPIMessageTracingSchema):
         ),
         required=False,
     )
-    comment = fields.Str(description="Human-readable comment", required=False)
+    comment = fields.Str(
+        description="Human-readable comment", required=False, allow_none=True
+    )
     trace = fields.Bool(
         description="Whether to trace event (default false)",
         required=False,
@@ -180,7 +182,9 @@ class V10CredentialProposalRequestSchemaBase(AdminAPIMessageTracingSchema):
         ),
         required=False,
     )
-    comment = fields.Str(description="Human-readable comment", required=False)
+    comment = fields.Str(
+        description="Human-readable comment", required=False, allow_none=True
+    )
     trace = fields.Bool(
         description="Whether to trace event (default false)",
         required=False,
@@ -228,7 +232,9 @@ class V10CredentialOfferRequestSchema(AdminAPIMessageTracingSchema):
         required=False,
         default=True,
     )
-    comment = fields.Str(description="Human-readable comment", required=False)
+    comment = fields.Str(
+        description="Human-readable comment", required=False, allow_none=True
+    )
     credential_preview = fields.Nested(CredentialPreviewSchema, required=True)
     trace = fields.Bool(
         description="Whether to trace event (default false)",
@@ -240,7 +246,9 @@ class V10CredentialOfferRequestSchema(AdminAPIMessageTracingSchema):
 class V10CredentialIssueRequestSchema(Schema):
     """Request schema for sending credential issue admin message."""
 
-    comment = fields.Str(description="Human-readable comment", required=False)
+    comment = fields.Str(
+        description="Human-readable comment", required=False, allow_none=True
+    )
 
 
 class V10CredentialProblemReportRequestSchema(Schema):
@@ -747,9 +755,7 @@ async def credential_exchange_create_free_offer(request: web.BaseRequest):
             perf_counter=r_time,
         )
 
-        oob_url = serialize_outofband(
-            context, credential_offer_message, conn_did, endpoint
-        )
+        oob_url = serialize_outofband(credential_offer_message, conn_did, endpoint)
         result = cred_ex_record.serialize()
     except (BaseModelError, CredentialManagerError, LedgerError) as err:
         await internal_error(

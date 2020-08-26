@@ -13,6 +13,7 @@ from ..ledger.provider import LedgerProvider
 from ..issuer.base import BaseIssuer
 from ..holder.base import BaseHolder
 from ..verifier.base import BaseVerifier
+from ..tails.base import BaseTailsServer
 
 from ..protocols.actionmenu.v1_0.base_service import BaseMenuService
 from ..protocols.actionmenu.v1_0.driver_service import DriverMenuService
@@ -56,11 +57,12 @@ class DefaultContextBuilder(ContextBuilder):
 
         context.injector.bind_provider(
             BaseStorage,
-            #CachedProvider(
-            StatsProvider(
-                StorageProvider(), ("add_record", "get_record", "search_records")
-            )
-            #),
+            DynamicProvider(
+                StatsProvider(
+                    StorageProvider(), ("add_record", "get_record", "search_records")
+                ),
+                'wallet.name'
+            ),
         )
         context.injector.bind_provider(
             BaseWallet,
@@ -81,7 +83,7 @@ class DefaultContextBuilder(ContextBuilder):
 
         context.injector.bind_provider(
             BaseLedger,
-            #CachedProvider(
+            DynamicProvider(
             StatsProvider(
                 LedgerProvider(),
                 (
@@ -90,8 +92,9 @@ class DefaultContextBuilder(ContextBuilder):
                     "get_credential_definition",
                     "get_schema",
                 ),
-            )
-            #),
+            ),
+                'wallet.name'
+            ),
         )
         context.injector.bind_provider(
             BaseIssuer,
@@ -119,6 +122,10 @@ class DefaultContextBuilder(ContextBuilder):
                 "aries_cloudagent.verifier.indy.IndyVerifier",
                 ClassProvider.Inject(BaseLedger),
             ),
+        )
+        context.injector.bind_provider(
+            BaseTailsServer,
+            ClassProvider("aries_cloudagent.tails.indy_tails_server.IndyTailsServer",),
         )
 
         # Register default pack format

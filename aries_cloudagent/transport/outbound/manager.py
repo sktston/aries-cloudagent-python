@@ -393,6 +393,9 @@ class OutboundTransportManager:
             if self.outbound_buffer:
                 if (not new_pending) and (not retry_count):
                     await self.outbound_event.wait()
+                elif retry_count:
+                    # only retries - yield here so we don't hog resources
+                    await asyncio.sleep(0.05)
             else:
                 break
 
@@ -412,7 +415,7 @@ class OutboundTransportManager:
             connection_id = queued.message.connection_id
             wallet_handler = await queued.context.inject(WalletHandler)
             wallet_id = await wallet_handler.get_wallet_for_connection(connection_id)
-            await wallet_handler.set_instance(wallet_id)
+            queued.context.settings.set_value("wallet.id", wallet_id)
             wire_format = await queued.context.inject(
                 BaseWireFormat
             )
