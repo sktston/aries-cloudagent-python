@@ -380,12 +380,13 @@ class Conductor:
         self.inbound_transport_manager.return_undelivered(outbound)
 
     def webhook_router(
-        self, topic: str, payload: dict, endpoint: str, max_attempts: int = None
+        self, context: InjectionContext, topic: str, payload: dict, endpoint: str, max_attempts: int = None
     ):
         """
         Route a webhook through the outbound transport manager.
 
         Args:
+            context: The request context
             topic: The webhook topic
             payload: The webhook payload
             endpoint: The endpoint of the webhook target
@@ -393,7 +394,7 @@ class Conductor:
         """
         try:
             self.outbound_transport_manager.enqueue_webhook(
-                topic, payload, endpoint, max_attempts
+                context, topic, payload, endpoint, max_attempts
             )
         except OutboundDeliveryError:
             LOGGER.warning(
