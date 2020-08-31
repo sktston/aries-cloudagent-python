@@ -5,6 +5,12 @@ from aiohttp_apispec import docs, request_schema, response_schema
 
 from marshmallow import fields, Schema
 
+from ..storage.base import BaseStorage
+from ..storage.error import StorageNotFoundError
+from ..storage.record import StorageRecord
+
+from .util import WEBHOOK_SENT_RECORD_TYPE
+
 
 class GetWebhooksResultsSchema(Schema):
     """Results schema for getting a list of webhooks."""
@@ -42,7 +48,12 @@ async def webhooks_get_webhooks(request: web.BaseRequest):
     """
     context = request["context"]
 
-    return web.json_response({"webhook_urls": []})
+    storage = await context.inject(BaseStorage)
+    found = await storage.search_records(
+        type_filter=WEBHOOK_SENT_RECORD_TYPE,
+    ).fetch_all()
+
+    return web.json_response({"webhook_urls": [record.value for record in found]})
 
 
 @docs(tags=["webhook"], summary="Add a new webhook.")
@@ -63,15 +74,33 @@ async def webhooks_add_webhook(request: web.BaseRequest):
     body = await request.json()
     webhook_url = body.get("webhook_url")
 
+    storage: BaseStorage = await context.inject(BaseStorage)
+    try:
+        result = await storage.search_records(
+            type_filter=WEBHOOK_SENT_RECORD_TYPE,
+            tag_query={"webhook_url": webhook_url},
+        ).fetch_single()
+        if result:
+            raise web.HTTPBadRequest(reason="specified webhook_url already exists.")
+    except StorageNotFoundError:
+        pass
+
+    record = StorageRecord(
+        WEBHOOK_SENT_RECORD_TYPE,
+        webhook_url,
+        {"webhook_url": webhook_url}
+    )
+    await storage.add_record(record)
+
     return web.json_response({"webhook_url": webhook_url, "result": "added"})
 
 
 @docs(tags=["webhook"], summary="Remove a webhook.")
 @request_schema(WebhookSchema())
 @response_schema(WebhookResultsSchema(), 200)
-async def webhooks_delete_webhook(request: web.BaseRequest):
+async def webhooks_remove_webhook(request: web.BaseRequest):
     """
-    Request handler for adding a new webhook.
+    Request handler for removing a webhook.
 
     Args:
         request: aiohttp request object
@@ -84,6 +113,18 @@ async def webhooks_delete_webhook(request: web.BaseRequest):
     body = await request.json()
     webhook_url = body.get("webhook_url")
 
+    storage: BaseStorage = await context.inject(BaseStorage)
+
+    try:
+        result = await storage.search_records(
+            type_filter=WEBHOOK_SENT_RECORD_TYPE,
+            tag_query={"webhook_url": webhook_url},
+        ).fetch_single()
+        if result:
+            await storage.delete_record(result)
+    except StorageNotFoundError:
+        raise web.HTTPBadRequest(reason="specified webhook_url does not exists.")
+
     return web.json_response({"webhook_url": webhook_url, "result": "removed"})
 
 
@@ -94,7 +135,7 @@ async def register(app: web.Application):
         [
             web.get("/webhooks", webhooks_get_webhooks, allow_head=False),
             web.post("/webhooks", webhooks_add_webhook),
-            web.delete("/webhooks", webhooks_delete_webhook),
+            web.delete("/webhooks", webhooks_remove_webhook),
         ]
     )
 
