@@ -1,6 +1,7 @@
 """Admin server classes."""
 
 import asyncio
+import json
 import logging
 from typing import Callable, Coroutine, Sequence, Set
 import uuid
@@ -20,6 +21,9 @@ from ..config.injection_context import InjectionContext
 from ..core.plugin_registry import PluginRegistry
 from ..ledger.error import LedgerConfigError, LedgerTransactionError
 from ..messaging.responder import BaseResponder
+from ..storage.base import BaseStorage
+from ..storage.error import StorageNotFoundError
+from ..storage.record import StorageRecord
 from ..transport.queue.basic import BasicMessageQueue
 from ..transport.outbound.message import OutboundMessage
 from ..utils.stats import Collector
@@ -34,6 +38,7 @@ from .error import AdminSetupError
 
 LOGGER = logging.getLogger(__name__)
 
+WEBHOOK_SENT_RECORD_TYPE = "webhook_sent"
 
 class AdminModulesSchema(Schema):
     """Schema for the modules endpoint."""
@@ -125,6 +130,32 @@ class WebhookTarget:
             filter = None
         self._topic_filter = filter
 
+    def serialize(self) -> str:
+        """Dump current object to a JSON-compatible dictionary."""
+        return {
+            "endpoint": self.endpoint,
+            "topic_filter": self.topic_filter,
+            "max_attempts": self.max_attempts,
+        }
+
+    def to_json(self) -> str:
+        """Return a JSON representation of the webhook target."""
+        return json.dumps(self.serialize())
+
+    @classmethod
+    def deserialize(cls, webhook_target: dict) -> "WebhookTarget":
+        """Construct webhook target object from dict representation."""
+        return WebhookTarget(
+            webhook_target["endpoint"],
+            webhook_target["topic_filter"],
+            webhook_target["max_attempts"]
+        )
+
+    @classmethod
+    def from_json(cls, webhook_target_json: str) -> "WebhookTarget":
+        """Return a webhook target object from json representation."""
+        return cls.deserialize(json.loads(webhook_target_json))
+
 
 @web.middleware
 async def ready_middleware(request: web.BaseRequest, handler: Coroutine):
@@ -201,7 +232,6 @@ class AdminServer(BaseAdminServer):
         self.loaded_modules = []
         self.task_queue = task_queue
         self.webhook_router = webhook_router
-        self.webhook_targets = {}
         self.websocket_queues = {}
         self.site = None
 
@@ -654,26 +684,59 @@ class AdminServer(BaseAdminServer):
 
         return ws
 
-    def add_webhook_target(
+    async def add_webhook_target(
         self,
         target_url: str,
         topic_filter: Sequence[str] = None,
         max_attempts: int = None,
     ):
         """Add a webhook target."""
-        self.webhook_targets[target_url] = WebhookTarget(
-            target_url, topic_filter, max_attempts
+        webhook_target = WebhookTarget(target_url, topic_filter, max_attempts)
+
+        storage: BaseStorage = await self.context.inject(BaseStorage)
+        try:
+            result = await storage.search_records(
+                type_filter=WEBHOOK_SENT_RECORD_TYPE,
+                tag_query={"target_url": target_url},
+            ).fetch_single()
+            if result:
+                return False
+        except StorageNotFoundError:
+            pass
+
+        record = StorageRecord(
+            WEBHOOK_SENT_RECORD_TYPE,
+            webhook_target.to_json(),
+            {"target_url": target_url}
         )
+        await storage.add_record(record)
+        return True
 
-    def remove_webhook_target(self, target_url: str):
+    async def remove_webhook_target(self, target_url: str):
         """Remove a webhook target."""
-        if target_url in self.webhook_targets:
-            del self.webhook_targets[target_url]
+        storage: BaseStorage = await self.context.inject(BaseStorage)
 
-    async def send_webhook(self, context: InjectionContext,topic: str, payload: dict):
+        try:
+            result = await storage.search_records(
+                type_filter=WEBHOOK_SENT_RECORD_TYPE,
+                tag_query={"target_url": target_url},
+            ).fetch_single()
+            if result:
+                await storage.delete_record(result)
+        except StorageNotFoundError:
+            return False
+
+        return True
+
+    async def send_webhook(self, context: InjectionContext, topic: str, payload: dict):
         """Add a webhook to the queue, to send to all registered targets."""
         if self.webhook_router:
-            for idx, target in self.webhook_targets.items():
+            storage = await context.inject(BaseStorage)
+            found = await storage.search_records(
+                type_filter=WEBHOOK_SENT_RECORD_TYPE,
+            ).fetch_all()
+            for record in found:
+                target = WebhookTarget.from_json(record.value)
                 if not target.topic_filter or topic in target.topic_filter:
                     self.webhook_router(
                         context, topic, payload, target.endpoint, target.max_attempts

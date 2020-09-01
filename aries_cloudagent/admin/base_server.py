@@ -23,7 +23,7 @@ class BaseAdminServer(ABC):
         """Stop the webserver."""
 
     @abstractmethod
-    def add_webhook_target(
+    async def add_webhook_target(
         self,
         target_url: str,
         topic_filter: Sequence[str] = None,
@@ -32,7 +32,7 @@ class BaseAdminServer(ABC):
         """Add a webhook target."""
 
     @abstractmethod
-    def remove_webhook_target(self, target_url: str):
+    async def remove_webhook_target(self, target_url: str):
         """Remove a webhook target."""
 
     @abstractmethod
