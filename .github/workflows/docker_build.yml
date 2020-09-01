@@ -10,7 +10,15 @@ jobs:
   build:
     runs-on: ubuntu-latest
 
+    env:
+      SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+    
     steps:
+    - uses: act10ns/slack@v1
+      with:
+        status: starting
+      if: always()
+    
     - name: Checkout source code
       uses: actions/checkout@v2
       with:
@@ -39,6 +47,7 @@ jobs:
         echo "::set-env name=DOCKERFILE_PATH::docker/Dockerfile.run" 
       
     - name: Build, tag, and push image to Amazon ECR
+      id: build-and-push-to-ecr
       working-directory: main
       run: |
         docker build -f $DOCKERFILE_PATH -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG .
@@ -49,12 +58,20 @@ jobs:
       with:
         kustomize-version: "3.8.1"
     - name: Update the image tag with Kustomize
+      id: update-config-with-kustomize
       working-directory: config
       run: |
         git config user.name github-actions
         git config user.email github-actions@github.com
+        git pull origin master
         cd overlays/dev
         kustomize edit set image $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
         git add kustomization.yaml
         git commit -m "Deploying image $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG"
         git push origin master
+    
+    - uses: act10ns/slack@v1
+      with:
+        status: ${{ job.status }}
+        steps: ${{ toJson(steps) }}
+      if: always()
