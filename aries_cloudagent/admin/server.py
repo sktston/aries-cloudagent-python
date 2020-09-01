@@ -11,7 +11,7 @@ from aiohttp_apispec import (
     docs,
     response_schema,
     setup_aiohttp_apispec,
-    validation_middleware,
+    validation_middleware, request_schema,
 )
 import aiohttp_cors
 
@@ -40,6 +40,7 @@ LOGGER = logging.getLogger(__name__)
 
 WEBHOOK_SENT_RECORD_TYPE = "webhook_sent"
 
+
 class AdminModulesSchema(Schema):
     """Schema for the modules endpoint."""
 
@@ -62,6 +63,40 @@ class AdminStatusReadinessSchema(Schema):
     """Schema for the readiness endpoint."""
 
     ready = fields.Boolean(description="Readiness status", example=True)
+
+
+class WebhookTargetSchema(Schema):
+    """Schema for the webhook target."""
+
+    target_url = fields.Str(required=True, description="webhook target url", example="http://localhost:8022/webhooks",)
+    topic_filter = fields.List(
+        fields.Str(
+            description="connections|issue_credential|present_proof|basicmessages|revocation_registry",
+            example="connections",),
+        required=False,
+        description="topics controller want to receive (null means all)",
+    )
+    max_attempts = fields.Integer(required=False, description="max attempts (null means default value 4)", example="4",)
+
+
+class AdminWebhooksGetResultsSchema(Schema):
+    """Results schema for getting a list of webhook targets."""
+
+    webhook_targets = fields.List(fields.Nested(WebhookTargetSchema()), description="webhook target list")
+
+
+class AdminWebhooksResultsSchema(Schema):
+    """Results schema for adding/removing a webhook target."""
+
+    target_url = fields.Str(description="webhook target url", example="http://localhost:8022/notifications",)
+    result = fields.Str(description="result of request", example="added",)
+
+
+class WebhookTargetUrlSchema(Schema):
+    """Result schema for a webhook target url."""
+
+    target_url = fields.Str(required=True, description="webhook target url",
+                            example="http://localhost:8022/notifications",)
 
 
 class AdminResponder(BaseResponder):
@@ -346,6 +381,9 @@ class AdminServer(BaseAdminServer):
                 web.get("/status/ready", self.readiness_handler, allow_head=False),
                 web.get("/shutdown", self.shutdown_handler, allow_head=False),
                 web.get("/ws", self.websocket_handler, allow_head=False),
+                web.get("/webhooks", self.webhooks_get_handler, allow_head=False),
+                web.post("/webhooks", self.webhooks_add_handler),
+                web.delete("/webhooks", self.webhooks_remove_handler),
             ]
         )
 
@@ -582,6 +620,76 @@ class AdminServer(BaseAdminServer):
         asyncio.ensure_future(self.conductor_stop(), loop=loop)
 
         return web.json_response({})
+
+    @docs(tags=["server"], summary="Get all webhook targets.")
+    @response_schema(AdminWebhooksGetResultsSchema(), 200)
+    async def webhooks_get_handler(self, request: web.BaseRequest):
+        """
+        Request handler to get all webhooks.
+
+        Args:
+            request: aiohttp request object.
+
+        Returns:
+            a list of webhook targets
+
+        """
+        context = request["context"]
+
+        storage = await context.inject(BaseStorage)
+        found = await storage.search_records(
+            type_filter=WEBHOOK_SENT_RECORD_TYPE,
+        ).fetch_all()
+
+        return web.json_response({"webhook_targets": [json.loads(record.value) for record in found]})
+
+    @docs(tags=["server"], summary="Add a new webhook target.")
+    @request_schema(WebhookTargetSchema())
+    @response_schema(AdminWebhooksResultsSchema(), 200)
+    async def webhooks_add_handler(self, request: web.BaseRequest):
+        """
+        Request handler for adding a new webhook target.
+
+        Args:
+            request: aiohttp request object
+
+        Returns:
+            Result of the request
+
+        """
+        body = await request.json()
+        target_url = body.get("target_url")
+        topic_filter = body.get("topic_filter")
+        max_attempts = body.get("max_attempts")
+
+        result = await self.add_webhook_target(target_url, topic_filter, max_attempts)
+        if not result:
+            raise web.HTTPBadRequest(reason="specified target_url already exists.")
+
+        return web.json_response({"target_url": target_url, "result": "added"})
+
+    @docs(tags=["server"], summary="Remove a webhook target.")
+    @request_schema(WebhookTargetUrlSchema())
+    @response_schema(AdminWebhooksResultsSchema(), 200)
+    async def webhooks_remove_handler(self, request: web.BaseRequest):
+        """
+        Request handler for removing a webhook target.
+
+        Args:
+            request: aiohttp request object
+
+        Returns:
+            Result of the request
+
+        """
+        body = await request.json()
+        target_url = body.get("target_url")
+
+        result = await self.remove_webhook_target(target_url)
+        if not result:
+            raise web.HTTPBadRequest(reason="specified target_url does not exists.")
+
+        return web.json_response({"target_url": target_url, "result": "removed"})
 
     def notify_fatal_error(self):
         """Set our readiness flags to force a restart (openshift)."""
