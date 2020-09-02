@@ -23,6 +23,14 @@ class BaseAdminServer(ABC):
         """Stop the webserver."""
 
     @abstractmethod
+    async def get_webhook_target_list(self):
+        """Get a list of webhook targets."""
+
+    @abstractmethod
+    async def get_webhook_target(self, webhook_id: str):
+        """Get a webhook target."""
+
+    @abstractmethod
     async def add_webhook_target(
         self,
         target_url: str,
@@ -32,7 +40,7 @@ class BaseAdminServer(ABC):
         """Add a webhook target."""
 
     @abstractmethod
-    async def remove_webhook_target(self, target_url: str):
+    async def remove_webhook_target(self, webhook_id: str):
         """Remove a webhook target."""
 
     @abstractmethod
