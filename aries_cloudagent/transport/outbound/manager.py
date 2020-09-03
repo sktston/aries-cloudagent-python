@@ -259,13 +259,12 @@ class OutboundTransportManager:
         self.process_queued()
 
     def enqueue_webhook(
-        self, context: InjectionContext, topic: str, payload: dict, endpoint: str, max_attempts: int = None
+        self, topic: str, payload: dict, endpoint: str, max_attempts: int = None
     ):
         """
         Add a webhook to the queue.
 
         Args:
-            context: The context of the request
             topic: The webhook topic
             payload: The webhook payload
             endpoint: The webhook endpoint
@@ -276,7 +275,7 @@ class OutboundTransportManager:
 
         """
         transport_id = self.get_running_transport_for_endpoint(endpoint)
-        queued = QueuedOutboundMessage(context, None, None, transport_id)
+        queued = QueuedOutboundMessage(self.context, None, None, transport_id)
         queued.endpoint = f"{endpoint}/topic/{topic}/"
         queued.payload = json.dumps(payload)
         queued.state = QueuedOutboundMessage.STATE_PENDING
