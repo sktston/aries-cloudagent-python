@@ -10,7 +10,6 @@ from ...config.injection_context import InjectionContext
 from ..stats import StatsTracer
 
 from .base import BaseOutboundTransport, OutboundTransportError
-from ...wallet.base import BaseWallet
 
 
 class HttpTransport(BaseOutboundTransport):
@@ -61,16 +60,6 @@ class HttpTransport(BaseOutboundTransport):
             headers["Content-Type"] = "application/ssi-agent-wire"
         else:
             headers["Content-Type"] = "application/json"
-
-        # if this is webhook message, add Wallet parameter to header
-        context = context.copy()
-        webhook_url = context.settings.get_value("admin.webhook_urls")[0]
-        if endpoint.find(webhook_url) == 0:
-            ext_plugins = context.settings.get_value("external_plugins")
-            if ext_plugins and 'aries_cloudagent.wallet_handler' in ext_plugins:
-                wallet: BaseWallet = await context.inject(BaseWallet)
-                headers["Wallet"] = wallet.name
-
         self.logger.debug(
             "Posting to %s; Data: %s; Headers: %s", endpoint, payload, headers
         )
