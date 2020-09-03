@@ -133,7 +133,7 @@ class AdminResponder(BaseResponder):
             topic: the webhook topic identifier
             payload: the webhook payload value
         """
-        await self._webhook(self._context, topic, payload)
+        await self._webhook(topic, payload)
 
 
 class WebhookTarget:
@@ -889,10 +889,10 @@ class AdminServer(BaseAdminServer):
 
         return True
 
-    async def send_webhook(self, context: InjectionContext, topic: str, payload: dict):
+    async def send_webhook(self, topic: str, payload: dict):
         """Add a webhook to the queue, to send to all registered targets."""
         if self.webhook_router:
-            storage = await context.inject(BaseStorage)
+            storage = await self.context.inject(BaseStorage)
             found = await storage.search_records(
                 type_filter=WEBHOOK_SENT_RECORD_TYPE,
             ).fetch_all()
@@ -900,7 +900,7 @@ class AdminServer(BaseAdminServer):
                 target = WebhookTarget.from_json(record.value)
                 if not target.topic_filter or topic in target.topic_filter:
                     self.webhook_router(
-                        context, topic, payload, target.target_url, target.max_attempts
+                        topic, payload, target.target_url, target.max_attempts
                     )
 
         for queue in self.websocket_queues.values():
