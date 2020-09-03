@@ -634,7 +634,8 @@ class AdminServer(BaseAdminServer):
             a list of webhook targets
 
         """
-        record_list = await self.get_webhook_target_list()
+        context = request["context"]
+        record_list = await self.get_webhook_target_list(context)
 
         results = []
         for record in record_list:
@@ -657,9 +658,10 @@ class AdminServer(BaseAdminServer):
             a webhook target
 
         """
+        context = request["context"]
         webhook_id = request.match_info["webhook_id"]
 
-        record = await self.get_webhook_target(webhook_id)
+        record = await self.get_webhook_target(context, webhook_id)
         if not record:
             raise web.HTTPBadRequest(reason="webhook target of specified webhook_id does not exists.")
 
@@ -681,12 +683,13 @@ class AdminServer(BaseAdminServer):
             a created webhook target
 
         """
+        context = request["context"]
         body = await request.json()
         target_url = body.get("target_url")
         topic_filter = body.get("topic_filter")
         max_attempts = body.get("max_attempts")
 
-        record = await self.add_webhook_target(target_url, topic_filter, max_attempts)
+        record = await self.add_webhook_target(context, target_url, topic_filter, max_attempts)
         if not record:
             raise web.HTTPBadRequest(reason="webhook target of specified target_url already exists.")
 
@@ -706,9 +709,10 @@ class AdminServer(BaseAdminServer):
         Returns:
 
         """
+        context = request["context"]
         webhook_id = request.match_info["webhook_id"]
 
-        result = await self.remove_webhook_target(webhook_id)
+        result = await self.remove_webhook_target(context, webhook_id)
         if not result:
             raise web.HTTPBadRequest(reason="webhook target of specified webhook_id does not exists.")
 
@@ -815,25 +819,20 @@ class AdminServer(BaseAdminServer):
 
         return ws
 
-    async def get_webhook_target_list(
-        self,
-    ):
+    async def get_webhook_target_list(self, context: InjectionContext):
         """Get a list of webhook targets."""
 
-        storage = await self.context.inject(BaseStorage)
+        storage = await context.inject(BaseStorage)
         record_list = await storage.search_records(
             type_filter=WEBHOOK_SENT_RECORD_TYPE,
         ).fetch_all()
 
         return record_list
 
-    async def get_webhook_target(
-        self,
-        webhook_id: str,
-    ):
+    async def get_webhook_target(self, context: InjectionContext, webhook_id: str):
         """Get a webhook target."""
 
-        storage = await self.context.inject(BaseStorage)
+        storage = await context.inject(BaseStorage)
         try:
             record = await storage.get_record(
                 record_type=WEBHOOK_SENT_RECORD_TYPE,
@@ -846,14 +845,14 @@ class AdminServer(BaseAdminServer):
 
     async def add_webhook_target(
         self,
+        context: InjectionContext,
         target_url: str,
         topic_filter: Sequence[str] = None,
         max_attempts: int = None,
     ):
         """Add a webhook target."""
-        webhook_target = WebhookTarget(target_url, topic_filter, max_attempts)
 
-        storage: BaseStorage = await self.context.inject(BaseStorage)
+        storage: BaseStorage = await context.inject(BaseStorage)
         try:
             result = await storage.search_records(
                 type_filter=WEBHOOK_SENT_RECORD_TYPE,
@@ -864,6 +863,7 @@ class AdminServer(BaseAdminServer):
         except StorageNotFoundError:
             pass
 
+        webhook_target = WebhookTarget(target_url, topic_filter, max_attempts)
         record = StorageRecord(
             type=WEBHOOK_SENT_RECORD_TYPE,
             value=webhook_target.to_json(),
@@ -873,10 +873,10 @@ class AdminServer(BaseAdminServer):
         await storage.add_record(record)
         return record
 
-    async def remove_webhook_target(self, webhook_id: str):
+    async def remove_webhook_target(self, context: InjectionContext, webhook_id: str):
         """Remove a webhook target."""
-        storage: BaseStorage = await self.context.inject(BaseStorage)
 
+        storage: BaseStorage = await context.inject(BaseStorage)
         try:
             record = await storage.get_record(
                 record_type=WEBHOOK_SENT_RECORD_TYPE,
