@@ -125,15 +125,16 @@ class AdminResponder(BaseResponder):
         """
         await self._send(self._context, message)
 
-    async def send_webhook(self, topic: str, payload: dict):
+    async def send_webhook(self, context: InjectionContext, topic: str, payload: dict):
         """
         Dispatch a webhook.
 
         Args:
+            context: The injection context to use
             topic: the webhook topic identifier
             payload: the webhook payload value
         """
-        await self._webhook(topic, payload)
+        await self._webhook(context, topic, payload)
 
 
 class WebhookTarget:
@@ -889,10 +890,10 @@ class AdminServer(BaseAdminServer):
 
         return True
 
-    async def send_webhook(self, topic: str, payload: dict):
+    async def send_webhook(self, context: InjectionContext, topic: str, payload: dict):
         """Add a webhook to the queue, to send to all registered targets."""
         if self.webhook_router:
-            storage = await self.context.inject(BaseStorage)
+            storage = await context.inject(BaseStorage)
             found = await storage.search_records(
                 type_filter=WEBHOOK_SENT_RECORD_TYPE,
             ).fetch_all()
