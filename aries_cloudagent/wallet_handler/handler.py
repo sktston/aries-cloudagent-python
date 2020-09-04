@@ -129,16 +129,16 @@ class WalletHandler():
                 self.add_path_mapping(
                     wallet.name, path)
 
-        # TODO: We need to change the requested instance so that the storage
-        # provider picks up the correct wallet for fetching the connections.
-        # Maybe there is a nicer way to handle this?
-        context.settings.set_value("wallet.id", wallet.name)
+        # Without changing the requested instance, the storage provider
+        # picks up the correct wallet for fetching the connections.
+        temp_context = context.copy()
+        temp_context.settings.set_value("wallet.id", wallet.name)
 
         # Add connections of opened wallet to handler.
         tag_filter = {}
         post_filter = {}
         # wallet_handler.set_instance(config["name"])
-        records = await ConnectionRecord.query(context, tag_filter, post_filter)
+        records = await ConnectionRecord.query(temp_context, tag_filter, post_filter)
         connections = [record.serialize() for record in records]
         for connection in connections:
             await self.add_connection(connection["connection_id"], config["name"])
