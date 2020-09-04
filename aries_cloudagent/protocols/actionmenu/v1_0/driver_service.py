@@ -65,4 +65,5 @@ class DriverMenuService(BaseMenuService):
         """Dispatch a webhook through the registered responder."""
         responder = await self._context.inject(BaseResponder, required=False)
         if responder:
-            await responder.send_webhook(topic, payload)
+            # FIXME: not sure self._context is correct. context should contains proper wallet.id
+            await responder.send_webhook(self._context, topic, payload)

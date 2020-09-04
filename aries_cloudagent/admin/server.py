@@ -1,6 +1,7 @@
 """Admin server classes."""
 
 import asyncio
+import json
 import logging
 from typing import Callable, Coroutine, Sequence, Set
 import uuid
@@ -10,7 +11,7 @@ from aiohttp_apispec import (
     docs,
     response_schema,
     setup_aiohttp_apispec,
-    validation_middleware,
+    validation_middleware, request_schema, match_info_schema,
 )
 import aiohttp_cors
 
@@ -20,6 +21,10 @@ from ..config.injection_context import InjectionContext
 from ..core.plugin_registry import PluginRegistry
 from ..ledger.error import LedgerConfigError, LedgerTransactionError
 from ..messaging.responder import BaseResponder
+from ..messaging.valid import UUIDFour
+from ..storage.base import BaseStorage
+from ..storage.error import StorageNotFoundError
+from ..storage.record import StorageRecord
 from ..transport.queue.basic import BasicMessageQueue
 from ..transport.outbound.message import OutboundMessage
 from ..utils.stats import Collector
@@ -33,6 +38,8 @@ from .error import AdminSetupError
 
 
 LOGGER = logging.getLogger(__name__)
+
+WEBHOOK_SENT_RECORD_TYPE = "webhook_sent"
 
 
 class AdminModulesSchema(Schema):
@@ -57,6 +64,38 @@ class AdminStatusReadinessSchema(Schema):
     """Schema for the readiness endpoint."""
 
     ready = fields.Boolean(description="Readiness status", example=True)
+
+
+class WebhookIdMatchInfoSchema(Schema):
+    """Path parameters and validators for request taking webhook id."""
+
+    webhook_id = fields.Str(description="webhook identifier", example=UUIDFour.EXAMPLE,)
+
+
+class WebhookTargetSchema(Schema):
+    """Schema for the webhook target."""
+
+    target_url = fields.Str(required=True, description="webhook target url", example="http://localhost:8022/webhooks",)
+    topic_filter = fields.List(
+        fields.Str(
+            description="connections|issue_credential|present_proof|basicmessages|revocation_registry",
+            example="connections",),
+        required=False,
+        description="topics controller want to receive (null means all)",
+    )
+    max_attempts = fields.Integer(required=False, description="max attempts (null means default value 4)", example="4",)
+
+
+class WebhookTargetRecordSchema(WebhookTargetSchema):
+    """Schema for the webhook target record."""
+
+    webhook_id = fields.Str(description="webhook identifier", example=UUIDFour.EXAMPLE,)
+
+
+class WebhookTargetRecordListSchema(Schema):
+    """Results schema for getting a list of webhook targets."""
+
+    results = fields.List(fields.Nested(WebhookTargetRecordSchema()), description="a list of webhook targets")
 
 
 class AdminResponder(BaseResponder):
@@ -86,15 +125,16 @@ class AdminResponder(BaseResponder):
         """
         await self._send(self._context, message)
 
-    async def send_webhook(self, topic: str, payload: dict):
+    async def send_webhook(self, context: InjectionContext, topic: str, payload: dict):
         """
         Dispatch a webhook.
 
         Args:
+            context: The injection context to use
             topic: the webhook topic identifier
             payload: the webhook payload value
         """
-        await self._webhook(topic, payload)
+        await self._webhook(context, topic, payload)
 
 
 class WebhookTarget:
@@ -102,12 +142,12 @@ class WebhookTarget:
 
     def __init__(
         self,
-        endpoint: str,
+        target_url: str,
         topic_filter: Sequence[str] = None,
         max_attempts: int = None,
     ):
         """Initialize the webhook target."""
-        self.endpoint = endpoint
+        self.target_url = target_url
         self.max_attempts = max_attempts
         self._topic_filter = None
         self.topic_filter = topic_filter  # call setter
@@ -124,6 +164,32 @@ class WebhookTarget:
         if filter and "*" in filter:
             filter = None
         self._topic_filter = filter
+
+    def serialize(self) -> str:
+        """Dump current object to a JSON-compatible dictionary."""
+        return {
+            "target_url": self.target_url,
+            "topic_filter": self.topic_filter,
+            "max_attempts": self.max_attempts,
+        }
+
+    def to_json(self) -> str:
+        """Return a JSON representation of the webhook target."""
+        return json.dumps(self.serialize())
+
+    @classmethod
+    def deserialize(cls, webhook_target: dict) -> "WebhookTarget":
+        """Construct webhook target object from dict representation."""
+        return WebhookTarget(
+            webhook_target["target_url"],
+            webhook_target["topic_filter"],
+            webhook_target["max_attempts"]
+        )
+
+    @classmethod
+    def from_json(cls, webhook_target_json: str) -> "WebhookTarget":
+        """Return a webhook target object from json representation."""
+        return cls.deserialize(json.loads(webhook_target_json))
 
 
 @web.middleware
@@ -201,7 +267,6 @@ class AdminServer(BaseAdminServer):
         self.loaded_modules = []
         self.task_queue = task_queue
         self.webhook_router = webhook_router
-        self.webhook_targets = {}
         self.websocket_queues = {}
         self.site = None
 
@@ -316,6 +381,10 @@ class AdminServer(BaseAdminServer):
                 web.get("/status/ready", self.readiness_handler, allow_head=False),
                 web.get("/shutdown", self.shutdown_handler, allow_head=False),
                 web.get("/ws", self.websocket_handler, allow_head=False),
+                web.get("/webhooks", self.webhooks_get_list_handler, allow_head=False),
+                web.get("/webhooks/{webhook_id}", self.webhooks_get_handler, allow_head=False),
+                web.post("/webhooks", self.webhooks_add_handler),
+                web.delete("/webhooks/{webhook_id}", self.webhooks_remove_handler),
             ]
         )
 
@@ -553,6 +622,103 @@ class AdminServer(BaseAdminServer):
 
         return web.json_response({})
 
+    @docs(tags=["server"], summary="Get a list of webhook targets")
+    @response_schema(WebhookTargetRecordListSchema(), 200)
+    async def webhooks_get_list_handler(self, request: web.BaseRequest):
+        """
+        Request handler to get all webhook targets.
+
+        Args:
+            request: aiohttp request object.
+
+        Returns:
+            a list of webhook targets
+
+        """
+        context = request["context"]
+        record_list = await self.get_webhook_target_list(context)
+
+        results = []
+        for record in record_list:
+            record_dict = json.loads(record.value)
+            record_dict["webhook_id"] = record.id
+            results.append(record_dict)
+        return web.json_response({"results": results})
+
+    @docs(tags=["server"], summary="Get a webhook target.")
+    @match_info_schema(WebhookIdMatchInfoSchema())
+    @response_schema(WebhookTargetRecordSchema(), 200)
+    async def webhooks_get_handler(self, request: web.BaseRequest):
+        """
+        Request handler to get a webhook target.
+
+        Args:
+            request: aiohttp request object.
+
+        Returns:
+            a webhook target
+
+        """
+        context = request["context"]
+        webhook_id = request.match_info["webhook_id"]
+
+        record = await self.get_webhook_target(context, webhook_id)
+        if not record:
+            raise web.HTTPBadRequest(reason="webhook target of specified webhook_id does not exists.")
+
+        record_dict = json.loads(record.value)
+        record_dict["webhook_id"] = record.id
+        return web.json_response(record_dict)
+
+    @docs(tags=["server"], summary="Add a new webhook target.")
+    @request_schema(WebhookTargetSchema())
+    @response_schema(WebhookTargetRecordSchema(), 201)
+    async def webhooks_add_handler(self, request: web.BaseRequest):
+        """
+        Request handler for adding a new webhook target.
+
+        Args:
+            request: aiohttp request object
+
+        Returns:
+            a created webhook target
+
+        """
+        context = request["context"]
+        body = await request.json()
+        target_url = body.get("target_url")
+        topic_filter = body.get("topic_filter")
+        max_attempts = body.get("max_attempts")
+
+        record = await self.add_webhook_target(context, target_url, topic_filter, max_attempts)
+        if not record:
+            raise web.HTTPBadRequest(reason="webhook target of specified target_url already exists.")
+
+        record_dict = json.loads(record.value)
+        record_dict["webhook_id"] = record.id
+        return web.json_response(record_dict)
+
+    @docs(tags=["server"], summary="Remove a webhook target.")
+    @match_info_schema(WebhookIdMatchInfoSchema())
+    async def webhooks_remove_handler(self, request: web.BaseRequest):
+        """
+        Request handler for removing a webhook target.
+
+        Args:
+            request: aiohttp request object
+
+        Returns:
+
+        """
+        context = request["context"]
+        webhook_id = request.match_info["webhook_id"]
+
+        result = await self.remove_webhook_target(context, webhook_id)
+        if not result:
+            raise web.HTTPBadRequest(reason="webhook target of specified webhook_id does not exists.")
+
+        return web.Response(status=204)
+
     def notify_fatal_error(self):
         """Set our readiness flags to force a restart (openshift)."""
         LOGGER.error("Received shutdown request notify_fatal_error()")
@@ -654,29 +820,88 @@ class AdminServer(BaseAdminServer):
 
         return ws
 
-    def add_webhook_target(
+    async def get_webhook_target_list(self, context: InjectionContext):
+        """Get a list of webhook targets."""
+
+        storage = await context.inject(BaseStorage)
+        record_list = await storage.search_records(
+            type_filter=WEBHOOK_SENT_RECORD_TYPE,
+        ).fetch_all()
+
+        return record_list
+
+    async def get_webhook_target(self, context: InjectionContext, webhook_id: str):
+        """Get a webhook target."""
+
+        storage = await context.inject(BaseStorage)
+        try:
+            record = await storage.get_record(
+                record_type=WEBHOOK_SENT_RECORD_TYPE,
+                record_id=webhook_id,
+            )
+        except StorageNotFoundError:
+            return None
+
+        return record
+
+    async def add_webhook_target(
         self,
+        context: InjectionContext,
         target_url: str,
         topic_filter: Sequence[str] = None,
         max_attempts: int = None,
     ):
         """Add a webhook target."""
-        self.webhook_targets[target_url] = WebhookTarget(
-            target_url, topic_filter, max_attempts
+
+        storage: BaseStorage = await context.inject(BaseStorage)
+        try:
+            result = await storage.search_records(
+                type_filter=WEBHOOK_SENT_RECORD_TYPE,
+                tag_query={"target_url": target_url},
+            ).fetch_single()
+            if result:
+                return None
+        except StorageNotFoundError:
+            pass
+
+        webhook_target = WebhookTarget(target_url, topic_filter, max_attempts)
+        record = StorageRecord(
+            type=WEBHOOK_SENT_RECORD_TYPE,
+            value=webhook_target.to_json(),
+            tags={"target_url": target_url},
+            id=str(uuid.uuid4())
         )
+        await storage.add_record(record)
+        return record
 
-    def remove_webhook_target(self, target_url: str):
+    async def remove_webhook_target(self, context: InjectionContext, webhook_id: str):
         """Remove a webhook target."""
-        if target_url in self.webhook_targets:
-            del self.webhook_targets[target_url]
 
-    async def send_webhook(self, topic: str, payload: dict):
+        storage: BaseStorage = await context.inject(BaseStorage)
+        try:
+            record = await storage.get_record(
+                record_type=WEBHOOK_SENT_RECORD_TYPE,
+                record_id=webhook_id,
+            )
+            if record:
+                await storage.delete_record(record)
+        except StorageNotFoundError:
+            return False
+
+        return True
+
+    async def send_webhook(self, context: InjectionContext, topic: str, payload: dict):
         """Add a webhook to the queue, to send to all registered targets."""
         if self.webhook_router:
-            for idx, target in self.webhook_targets.items():
+            storage = await context.inject(BaseStorage)
+            found = await storage.search_records(
+                type_filter=WEBHOOK_SENT_RECORD_TYPE,
+            ).fetch_all()
+            for record in found:
+                target = WebhookTarget.from_json(record.value)
                 if not target.topic_filter or topic in target.topic_filter:
                     self.webhook_router(
-                        topic, payload, target.endpoint, target.max_attempts
+                        topic, payload, target.target_url, target.max_attempts
                     )
 
         for queue in self.websocket_queues.values():

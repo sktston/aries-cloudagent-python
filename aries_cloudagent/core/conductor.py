@@ -113,7 +113,7 @@ class Conductor:
                 webhook_urls = context.settings.get("admin.webhook_urls")
                 if webhook_urls:
                     for url in webhook_urls:
-                        self.admin_server.add_webhook_target(url)
+                        await self.admin_server.add_webhook_target(context, url)
                 context.injector.bind_instance(BaseAdminServer, self.admin_server)
                 if "http" not in self.outbound_transport_manager.registered_schemes:
                     self.outbound_transport_manager.register("http")
