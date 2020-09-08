@@ -417,10 +417,10 @@ class AdminServer(BaseAdminServer):
                 app=app, 
                 title=agent_label, 
                 version=version_string, 
-                swagger_path="/aca-py/swagger-ui", 
-                static_path="/aca-py/swagger-ui/static/swagger", 
-                url="/aca-py/swagger-ui/swagger.json", 
-                basePath="/aca-py/admin",
+                swagger_path="/agent/swagger-ui", 
+                static_path="/agent/swagger-ui/static/swagger", 
+                url="/agent/swagger-ui/swagger.json", 
+                basePath="/agent/admin",
                 securityDefinitions={
                     "OAuth2": {"type": "apiKey", "name": "Authorization", "in": "header"}
                 }, 
