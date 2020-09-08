@@ -420,7 +420,7 @@ class AdminServer(BaseAdminServer):
                 swagger_path="/agent/swagger-ui", 
                 static_path="/agent/swagger-ui/static/swagger", 
                 url="/agent/swagger-ui/swagger.json", 
-                basePath="/agent/admin",
+                basePath="/agent/api",
                 securityDefinitions={
                     "OAuth2": {"type": "apiKey", "name": "Authorization", "in": "header"}
                 }, 
