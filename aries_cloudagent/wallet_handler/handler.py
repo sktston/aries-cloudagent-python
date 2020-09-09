@@ -4,6 +4,7 @@ import json
 import re
 import time
 import logging
+import uuid
 
 import indy.anoncreds
 import indy.did
@@ -27,7 +28,7 @@ from ..connections.models.connection_record import (
     ConnectionRecord,
 )
 
-from .error import KeyNotFoundError
+from .error import KeyNotFoundError, WalletAccessError
 from .error import WalletNotFoundError
 from .error import DuplicateMappingError
 
@@ -93,20 +94,13 @@ class WalletHandler():
         Args:
             context: Injection context.
         """
-        # search wallets in admin storage
-        admin_context = context.copy()
-        admin_context.settings.set_value("wallet.id", context.settings.get_value("wallet.name"))
-        storage: BaseStorage = await admin_context.inject(BaseStorage)
-        found = await storage.search_records(
+        # search wallets in admin storage (admin context is assumed)
+        storage: BaseStorage = await context.inject(BaseStorage)
+        record_list = await storage.search_records(
             type_filter=WALLET_CONFIG_RECORD_TYPE,
         ).fetch_all()
-        wallet_names = []
-        for record in found:
-            config = json.loads(record.value)
-            wallet_names.append(config["name"])
 
-        instances = list(self._provider._instances.keys())
-        return wallet_names
+        return record_list
 
     async def add_instance(self, config: dict, context: InjectionContext):
         """
@@ -174,16 +168,16 @@ class WalletHandler():
                 tag_query={"name": config["name"]},
             ).fetch_single()
             if result:
-                return
+                raise WalletDuplicateError()
         except StorageNotFoundError:
-            pass
-
-        record = StorageRecord(
-            type=WALLET_CONFIG_RECORD_TYPE,
-            value=json.dumps(config),
-            tags={"name": config["name"]},
-        )
-        await storage.add_record(record)
+            record = StorageRecord(
+                type=WALLET_CONFIG_RECORD_TYPE,
+                value=json.dumps(config),
+                tags={"name": config["name"]},
+                id=str(uuid.uuid4()),
+            )
+            await storage.add_record(record)
+            return record
 
     async def set_instance(self, wallet: str, context: InjectionContext):
         """
@@ -206,24 +200,47 @@ class WalletHandler():
                     tag_query={"name": wallet},
                 ).fetch_single()
                 if result:
-                    await self.add_instance(json.loads(result.value), admin_context)
+                    try:
+                        await self.add_instance(json.loads(result.value), admin_context)
+                    except WalletDuplicateError:
+                        pass
             except StorageNotFoundError:
                 raise WalletNotFoundError('Requested not exisiting wallet instance.')
         context.settings.set_value("wallet.id", wallet)
 
-    async def delete_instance(self, id: str, context: InjectionContext):
+    async def delete_instance(self, wallet_id: str, context: InjectionContext):
         """
         Delete handled instance from handler and storage.
 
         Args:
-            id: Identifier of the instance to be deleted.
+            wallet_id: Identifier of the instance to be deleted.
             context: Injection context.
         """
 
+        # get record to get wallet name (admin context is assumed)
+        storage = await context.inject(BaseStorage)
         try:
-            wallet = self._provider._instances.pop(id)
+            record = await storage.get_record(
+                record_type=WALLET_CONFIG_RECORD_TYPE,
+                record_id=wallet_id,
+            )
+        except StorageNotFoundError:
+            raise WalletNotFoundError("wallet is not found: %s", wallet_id)
+
+        record_dict = json.loads(record.value)
+        wallet_name = record_dict["name"]
+
+        # can not delete admin wallet
+        if wallet_name == context.settings.get_value("wallet.name"):
+            raise WalletAccessError()
+
+        # remove wallet config in admin storage
+        await storage.delete_record(record)
+
+        try:
+            wallet = self._provider._instances.pop(wallet_name)
         except KeyError:
-            raise WalletNotFoundError(f"Wallet not found: {id}")
+            return
 
         if wallet.WALLET_TYPE == 'indy':
             # Delete wallet from storage.
@@ -235,31 +252,19 @@ class WalletHandler():
                 )
             except IndyError as x_indy:
                 if x_indy.error_code == ErrorCode.WalletNotFoundError:
-                    raise WalletNotFoundError(f"Wallet not found: {id}")
+                    raise WalletNotFoundError(f"Wallet not found: {wallet_name}")
                 raise WalletError(str(x_indy))
 
         # Remove all path mappings of wallet.
         self._path_mappings = {
-            key: val for key, val in self._path_mappings.items() if val != id
+            key: val for key, val in self._path_mappings.items() if val != wallet_name
             }
         self._handled_keys = {
-            key: val for key, val in self._path_mappings.items() if val != id
+            key: val for key, val in self._path_mappings.items() if val != wallet_name
             }
         self._connections = {
-            key: val for key, val in self._path_mappings.items() if val != id
+            key: val for key, val in self._path_mappings.items() if val != wallet_name
             }
-
-        # remove wallet config in admin storage if exist (admin context is assumed)
-        storage: BaseStorage = await context.inject(BaseStorage)
-        try:
-            record = await storage.search_records(
-                type_filter=WALLET_CONFIG_RECORD_TYPE,
-                tag_query={"name": id},
-            ).fetch_single()
-            if record:
-                await storage.delete_record(record)
-        except StorageNotFoundError:
-            LOGGER.warning("Record is not exist: $s", id)
 
     async def generate_path_mapping(self, wallet_id: str, did: str = None) -> str:
         """

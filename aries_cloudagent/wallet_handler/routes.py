@@ -1,13 +1,15 @@
 """Wallet handler admin routes."""
+import json
 
 from aiohttp import web
-from aiohttp_apispec import docs, request_schema, response_schema
+from aiohttp_apispec import docs, request_schema, response_schema, match_info_schema
 import hashlib
 import re
 from base64 import b64encode
 
 from .handler import WalletHandler
-from .error import WalletNotFoundError
+from .error import WalletNotFoundError, WalletAccessError
+from ..messaging.valid import UUIDFour
 from ..wallet.base import BaseWallet
 from ..wallet.error import WalletError, WalletDuplicateError
 
@@ -55,33 +57,38 @@ async def create_connection_handle(wallet: BaseWallet, n: int) -> str:
     return path
 
 
-class AddWalletSchema(Schema):
-    """Request schema for adding a new wallet which will be registered by the agent."""
+class WalletSchema(Schema):
+    """schema for adding a new wallet which will be registered by the agent."""
 
-    wallet_name = fields.Str(
-        description="Wallet identifier.",
-        example='MyNewWallet'
-    )
-    wallet_key = fields.Str(
-        description="Master key used for key derivation.",
-        example='MySecretKey123'
-    )
-    seed = fields.Str(
-        description="Seed used for did derivation.",
-        example='aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa'
-    )
-    wallet_type = fields.Str(
-        description="Type the newly generated wallet should be [basic | indy].",
-        example='indy',
-        default='indy'
-    )
+    name = fields.Str(required=True, description="wallet name", example='faber',)
+    key = fields.Str(required=True, description="master key used for key derivation", example='faber.key.123',)
+    type = fields.Str(required=True, description="type of wallet [basic | indy]",example='indy',)
 
 
-@docs(
-    tags=["wallet"],
-    summary="Add new wallet to be handled by this agent.",
-)
-@request_schema(AddWalletSchema())
+class WalletRecordSchema(WalletSchema):
+    """Schema for a wallet record."""
+
+    wallet_id = fields.Str(description="wallet identifier", example=UUIDFour.EXAMPLE,)
+    storage_type = fields.Str(description="storage type", example=None,)
+    storage_config = fields.Str(description="storage config", example=None,)
+    storage_creds = fields.Str(description="storage creds", example=None,)
+
+
+class WalletRecordListSchema(Schema):
+    """Schema for a list of wallets."""
+
+    results = fields.List(fields.Nested(WalletRecordSchema()), description="a list of wallet")
+
+
+class WalletIdMatchInfoSchema(Schema):
+    """Path parameters and validators for request taking wallet id."""
+
+    wallet_id = fields.Str(description="wallet identifier", example=UUIDFour.EXAMPLE,)
+
+
+@docs(tags=["wallet"], summary="Add a new wallet",)
+@request_schema(WalletSchema())
+@response_schema(WalletRecordSchema(), 201)
 async def wallet_handler_add_wallet(request: web.BaseRequest):
     """
     Request handler for adding a new wallet for handling by the agent.
@@ -104,12 +111,12 @@ async def wallet_handler_add_wallet(request: web.BaseRequest):
     body = await request.json()
 
     config = {}
-    if body.get("wallet_name"):
-        config["name"] = body.get("wallet_name")
+    if body.get("name"):
+        config["name"] = body.get("name")
     else:
         raise web.HTTPBadRequest(reason="Name needs to be provided to create a wallet.")
-    config["key"] = body.get("wallet_key")
-    wallet_type = body.get("wallet_type")
+    config["key"] = body.get("key")
+    wallet_type = body.get("type")
     if wallet_type not in WALLET_TYPES:
         raise web.HTTPBadRequest(reason="Specified wallet type is not supported.")
     config["type"] = wallet_type
@@ -117,17 +124,17 @@ async def wallet_handler_add_wallet(request: web.BaseRequest):
     wallet_handler: WalletHandler = await context.inject(WalletHandler, required=False)
 
     try:
-        await wallet_handler.add_instance(config, context)
+        record = await wallet_handler.add_instance(config, context)
     except WalletDuplicateError:
         raise web.HTTPBadRequest(reason="Wallet with specified name already exists.")
 
-    return web.Response(body='created', status=201)
+    record_dict = json.loads(record.value)
+    record_dict["wallet_id"] = record.id
+    return web.json_response(record_dict, status=201)
 
 
-@docs(
-    tags=["wallet"],
-    summary="Get identifiers of all handled wallets.",
-)
+@docs(tags=["wallet"], summary="Get a list of wallets",)
+@response_schema(WalletRecordListSchema(), 200)
 async def wallet_handler_get_wallets(request: web.BaseRequest):
     """
     Request handler to obtain all identifiers of the handled wallets.
@@ -143,16 +150,18 @@ async def wallet_handler_get_wallets(request: web.BaseRequest):
         raise web.HTTPUnauthorized(reason="only admin wallet allowed.")
 
     wallet_handler: WalletHandler = await context.inject(WalletHandler, required=False)
-    wallet_names = await wallet_handler.get_instances(context)
+    record_list = await wallet_handler.get_instances(context)
 
-    return web.json_response({"result": wallet_names})
+    results = []
+    for record in record_list:
+        record_dict = json.loads(record.value)
+        record_dict["wallet_id"] = record.id
+        results.append(record_dict)
+    return web.json_response({"results": results})
 
 
-@docs(
-    tags=["wallet"],
-    summary="Remove a wallet from handled wallets and delete it from storage.",
-    parameters=[{"in": "path", "name": "id", "description": "Identifier of wallet."}],
-)
+@docs(tags=["wallet"], summary="Remove a wallet",)
+@match_info_schema(WalletIdMatchInfoSchema())
 async def wallet_handler_remove_wallet(request: web.BaseRequest):
     """
     Request handler to remove a wallet from agent and storage.
@@ -162,7 +171,7 @@ async def wallet_handler_remove_wallet(request: web.BaseRequest):
 
     """
     context = request["context"]
-    wallet_name = request.match_info["id"]
+    wallet_id = request.match_info["wallet_id"]
 
     wallet: BaseWallet = await context.inject(BaseWallet)
     # admin only can do this
@@ -172,14 +181,16 @@ async def wallet_handler_remove_wallet(request: web.BaseRequest):
     wallet_handler: WalletHandler = await context.inject(WalletHandler)
 
     try:
-        await wallet_handler.delete_instance(wallet_name, context)
+        await wallet_handler.delete_instance(wallet_id, context)
     #    raise web.HTTPBadRequest(reason="Wallet to delete not found.")
     except WalletNotFoundError:
         raise web.HTTPNotFound(reason=f"Requested wallet to delete not in storage.")
+    except WalletAccessError:
+        raise web.HTTPBadRequest(reason="deleting admin wallet is not allowed")
     except WalletError:
         raise web.HTTPError(reason=WalletError.message)
 
-    return web.json_response({"result": "Deleted wallet {}".format(wallet_name)})
+    return web.Response(status=204)
 
 
 async def register(app: web.Application):
@@ -189,6 +200,6 @@ async def register(app: web.Application):
         [
             web.get("/wallet", wallet_handler_get_wallets, allow_head=False),
             web.post("/wallet", wallet_handler_add_wallet),
-            web.post("/wallet/{id}/remove", wallet_handler_remove_wallet),
+            web.delete("/wallet/{wallet_id}", wallet_handler_remove_wallet),
         ]
     )

@@ -1,6 +1,7 @@
 """Wallet configuration."""
 import json
 import logging
+import uuid
 
 from ..storage.base import BaseStorage
 from ..storage.error import StorageNotFoundError
@@ -104,6 +105,7 @@ async def wallet_config(context: InjectionContext, provision: bool = False):
             type=WALLET_CONFIG_RECORD_TYPE,
             value=json.dumps(config),
             tags={"name": config["name"]},
+            id=str(uuid.uuid4()),
         )
         await storage.add_record(record)
 
