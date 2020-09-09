@@ -85,28 +85,30 @@ async def wallet_config(context: InjectionContext, provision: bool = False):
         )
 
     # add wallet config in admin storage if not exist
-    storage: BaseStorage = await context.inject(BaseStorage)
-    try:
-        result = await storage.search_records(
-            type_filter=WALLET_CONFIG_RECORD_TYPE,
-            tag_query={"name": wallet.name},
-        ).fetch_single()
-        if result:
-            pass
-    except StorageNotFoundError:
-        config = {}
-        config["name"] = wallet.name
-        config["key"] = wallet._key
-        config["type"] = wallet.type
-        config["storage_type"] = wallet._storage_type
-        config["storage_config"] = wallet._storage_config
-        config["storage_creds"] = wallet._storage_creds
-        record = StorageRecord(
-            type=WALLET_CONFIG_RECORD_TYPE,
-            value=json.dumps(config),
-            tags={"name": config["name"]},
-            id=str(uuid.uuid4()),
-        )
-        await storage.add_record(record)
+    ext_plugins = context.settings.get_value("external_plugins")
+    if ext_plugins and 'aries_cloudagent.wallet_handler' in ext_plugins:
+        storage: BaseStorage = await context.inject(BaseStorage)
+        try:
+            result = await storage.search_records(
+                type_filter=WALLET_CONFIG_RECORD_TYPE,
+                tag_query={"name": wallet.name},
+            ).fetch_single()
+            if result:
+                pass
+        except StorageNotFoundError:
+            config = {}
+            config["name"] = wallet.name
+            config["key"] = wallet._key
+            config["type"] = wallet.type
+            config["storage_type"] = wallet._storage_type
+            config["storage_config"] = wallet._storage_config
+            config["storage_creds"] = wallet._storage_creds
+            record = StorageRecord(
+                type=WALLET_CONFIG_RECORD_TYPE,
+                value=json.dumps(config),
+                tags={"name": config["name"]},
+                id=str(uuid.uuid4()),
+            )
+            await storage.add_record(record)
 
     return public_did

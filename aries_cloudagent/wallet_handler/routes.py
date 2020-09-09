@@ -124,7 +124,7 @@ async def wallet_handler_add_wallet(request: web.BaseRequest):
     wallet_handler: WalletHandler = await context.inject(WalletHandler, required=False)
 
     try:
-        record = await wallet_handler.add_instance(config, context)
+        record = await wallet_handler.add_wallet(config, context)
     except WalletDuplicateError:
         raise web.HTTPBadRequest(reason="Wallet with specified name already exists.")
 
@@ -150,7 +150,7 @@ async def wallet_handler_get_wallets(request: web.BaseRequest):
         raise web.HTTPUnauthorized(reason="only admin wallet allowed.")
 
     wallet_handler: WalletHandler = await context.inject(WalletHandler, required=False)
-    record_list = await wallet_handler.get_instances(context)
+    record_list = await wallet_handler.get_wallets(context)
 
     results = []
     for record in record_list:
@@ -181,14 +181,13 @@ async def wallet_handler_remove_wallet(request: web.BaseRequest):
     wallet_handler: WalletHandler = await context.inject(WalletHandler)
 
     try:
-        await wallet_handler.delete_instance(wallet_id, context)
-    #    raise web.HTTPBadRequest(reason="Wallet to delete not found.")
-    except WalletNotFoundError:
-        raise web.HTTPNotFound(reason=f"Requested wallet to delete not in storage.")
-    except WalletAccessError:
-        raise web.HTTPBadRequest(reason="deleting admin wallet is not allowed")
-    except WalletError:
-        raise web.HTTPError(reason=WalletError.message)
+        await wallet_handler.remove_wallet(wallet_id, context)
+    except WalletNotFoundError as err:
+        raise web.HTTPNotFound(reason=err.roll_up) from err
+    except WalletAccessError as err:
+        raise web.HTTPBadRequest(reason=err.roll_up) from err
+    except WalletError as err:
+        raise web.HTTPBadRequest(reason=err.roll_up) from err
 
     return web.Response(status=204)
 
