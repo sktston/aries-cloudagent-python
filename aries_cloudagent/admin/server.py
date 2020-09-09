@@ -76,6 +76,12 @@ class WebhookTargetSchema(Schema):
     """Schema for the webhook target."""
 
     target_url = fields.Str(required=True, description="webhook target url", example="http://localhost:8022/webhooks",)
+
+
+class WebhookTargetRecordSchema(WebhookTargetSchema):
+    """Schema for the webhook target record."""
+
+    webhook_id = fields.Str(description="webhook identifier", example=UUIDFour.EXAMPLE,)
     topic_filter = fields.List(
         fields.Str(
             description="connections|issue_credential|present_proof|basicmessages|revocation_registry",
@@ -83,13 +89,7 @@ class WebhookTargetSchema(Schema):
         required=False,
         description="topics controller want to receive (null means all)",
     )
-    max_attempts = fields.Integer(required=False, description="max attempts (null means default value 4)", example="4",)
-
-
-class WebhookTargetRecordSchema(WebhookTargetSchema):
-    """Schema for the webhook target record."""
-
-    webhook_id = fields.Str(description="webhook identifier", example=UUIDFour.EXAMPLE,)
+    max_attempts = fields.Integer(required=False, description="max attempts (null means default value 4)", example=4,)
 
 
 class WebhookTargetRecordListSchema(Schema):
@@ -686,16 +686,14 @@ class AdminServer(BaseAdminServer):
         context = request["context"]
         body = await request.json()
         target_url = body.get("target_url")
-        topic_filter = body.get("topic_filter")
-        max_attempts = body.get("max_attempts")
 
-        record = await self.add_webhook_target(context, target_url, topic_filter, max_attempts)
+        record = await self.add_webhook_target(context, target_url)
         if not record:
             raise web.HTTPBadRequest(reason="webhook target of specified target_url already exists.")
 
         record_dict = json.loads(record.value)
         record_dict["webhook_id"] = record.id
-        return web.json_response(record_dict)
+        return web.json_response(record_dict, status=201)
 
     @docs(tags=["server"], summary="Remove a webhook target.")
     @match_info_schema(WebhookIdMatchInfoSchema())
