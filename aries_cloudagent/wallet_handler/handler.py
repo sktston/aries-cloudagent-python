@@ -3,6 +3,7 @@
 import json
 import re
 import time
+import logging
 
 import indy.anoncreds
 import indy.did
@@ -11,6 +12,9 @@ import hashlib
 from indy.error import IndyError, ErrorCode
 from base64 import b64encode, b64decode
 
+from ..config.wallet import WALLET_CONFIG_RECORD_TYPE
+from ..storage.error import StorageNotFoundError
+from ..storage.record import StorageRecord
 from ..wallet.base import BaseWallet
 from ..storage.base import BaseStorage
 from ..ledger.base import BaseLedger
@@ -26,6 +30,8 @@ from ..connections.models.connection_record import (
 from .error import KeyNotFoundError
 from .error import WalletNotFoundError
 from .error import DuplicateMappingError
+
+LOGGER = logging.getLogger(__name__)
 
 
 class WalletHandler():
@@ -80,9 +86,27 @@ class WalletHandler():
 
         self._provider = provider
 
-    async def get_instances(self):
-        """Return list of handled instances."""
-        return list(self._provider._instances.keys())
+    async def get_instances(self, context: InjectionContext):
+        """
+        Return list of handled instances.
+
+        Args:
+            context: Injection context.
+        """
+        # search wallets in admin storage
+        admin_context = context.copy()
+        admin_context.settings.set_value("wallet.id", context.settings.get_value("wallet.name"))
+        storage: BaseStorage = await admin_context.inject(BaseStorage)
+        found = await storage.search_records(
+            type_filter=WALLET_CONFIG_RECORD_TYPE,
+        ).fetch_all()
+        wallet_names = []
+        for record in found:
+            config = json.loads(record.value)
+            wallet_names.append(config["name"])
+
+        instances = list(self._provider._instances.keys())
+        return wallet_names
 
     async def add_instance(self, config: dict, context: InjectionContext):
         """
@@ -118,7 +142,6 @@ class WalletHandler():
         ledger_provider = context.injector._providers[BaseLedger]
         ledger_provider._instances[wallet.name] = ledger
 
-
         # Get dids and check for paths in metadata.
         dids = await wallet.get_local_dids()
         for did in dids:
@@ -131,31 +154,70 @@ class WalletHandler():
 
         # Without changing the requested instance, the storage provider
         # picks up the correct wallet for fetching the connections.
-        temp_context = context.copy()
-        temp_context.settings.set_value("wallet.id", wallet.name)
+        new_wallet_context = context.copy()
+        new_wallet_context.settings.set_value("wallet.id", wallet.name)
 
         # Add connections of opened wallet to handler.
         tag_filter = {}
         post_filter = {}
         # wallet_handler.set_instance(config["name"])
-        records = await ConnectionRecord.query(temp_context, tag_filter, post_filter)
+        records = await ConnectionRecord.query(new_wallet_context, tag_filter, post_filter)
         connections = [record.serialize() for record in records]
         for connection in connections:
             await self.add_connection(connection["connection_id"], config["name"])
 
+        # add wallet config in admin storage if not exist (admin context is assumed)
+        storage: BaseStorage = await context.inject(BaseStorage)
+        try:
+            result = await storage.search_records(
+                type_filter=WALLET_CONFIG_RECORD_TYPE,
+                tag_query={"name": config["name"]},
+            ).fetch_single()
+            if result:
+                return
+        except StorageNotFoundError:
+            pass
+
+        record = StorageRecord(
+            type=WALLET_CONFIG_RECORD_TYPE,
+            value=json.dumps(config),
+            tags={"name": config["name"]},
+        )
+        await storage.add_record(record)
+
     async def set_instance(self, wallet: str, context: InjectionContext):
-        """Set a specific wallet to open by the provider."""
-        instances = await self.get_instances()
+        """
+        Set a specific wallet to open by the provider.
+
+        Args:
+            wallet: wallet name
+            context: Injection context.
+        """
+        instances = list(self._provider._instances.keys())
         if wallet not in instances:
-            raise WalletNotFoundError('Requested not exisiting wallet instance.')
+            # wallet is not in memory
+            # search and add wallet in admin storage if exist
+            admin_context = context.copy()
+            admin_context.settings.set_value("wallet.id", context.settings.get_value("wallet.name"))
+            storage: BaseStorage = await admin_context.inject(BaseStorage)
+            try:
+                result = await storage.search_records(
+                    type_filter=WALLET_CONFIG_RECORD_TYPE,
+                    tag_query={"name": wallet},
+                ).fetch_single()
+                if result:
+                    await self.add_instance(json.loads(result.value), admin_context)
+            except StorageNotFoundError:
+                raise WalletNotFoundError('Requested not exisiting wallet instance.')
         context.settings.set_value("wallet.id", wallet)
 
-    async def delete_instance(self, id: str):
+    async def delete_instance(self, id: str, context: InjectionContext):
         """
         Delete handled instance from handler and storage.
 
         Args:
             id: Identifier of the instance to be deleted.
+            context: Injection context.
         """
 
         try:
@@ -186,6 +248,18 @@ class WalletHandler():
         self._connections = {
             key: val for key, val in self._path_mappings.items() if val != id
             }
+
+        # remove wallet config in admin storage if exist (admin context is assumed)
+        storage: BaseStorage = await context.inject(BaseStorage)
+        try:
+            record = await storage.search_records(
+                type_filter=WALLET_CONFIG_RECORD_TYPE,
+                tag_query={"name": id},
+            ).fetch_single()
+            if record:
+                await storage.delete_record(record)
+        except StorageNotFoundError:
+            LOGGER.warning("Record is not exist: $s", id)
 
     async def generate_path_mapping(self, wallet_id: str, did: str = None) -> str:
         """

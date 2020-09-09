@@ -348,7 +348,6 @@ class AdminServer(BaseAdminServer):
                 # TODO: Authorization concept.
                 header_auth = request.headers.get("Wallet")
                 if not header_auth:
-
                     raise web.HTTPUnauthorized()
 
                 # Request instance and lock request of wallet provider so that

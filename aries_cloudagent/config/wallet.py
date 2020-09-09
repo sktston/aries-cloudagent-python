@@ -1,7 +1,10 @@
 """Wallet configuration."""
-
+import json
 import logging
 
+from ..storage.base import BaseStorage
+from ..storage.error import StorageNotFoundError
+from ..storage.record import StorageRecord
 from ..wallet.base import BaseWallet
 from ..wallet.crypto import seed_to_did
 
@@ -9,6 +12,7 @@ from .base import ConfigError
 from .injection_context import InjectionContext
 
 LOGGER = logging.getLogger(__name__)
+WALLET_CONFIG_RECORD_TYPE = "wallet_config"
 
 
 async def wallet_config(context: InjectionContext, provision: bool = False):
@@ -78,5 +82,29 @@ async def wallet_config(context: InjectionContext, provision: bool = False):
         await wallet.create_local_did(
             seed=test_seed, metadata={"endpoint": "1.2.3.4:8021"}
         )
+
+    # add wallet config in admin storage if not exist
+    storage: BaseStorage = await context.inject(BaseStorage)
+    try:
+        result = await storage.search_records(
+            type_filter=WALLET_CONFIG_RECORD_TYPE,
+            tag_query={"name": wallet.name},
+        ).fetch_single()
+        if result:
+            pass
+    except StorageNotFoundError:
+        config = {}
+        config["name"] = wallet.name
+        config["key"] = wallet._key
+        config["type"] = wallet.type
+        config["storage_type"] = wallet._storage_type
+        config["storage_config"] = wallet._storage_config
+        config["storage_creds"] = wallet._storage_creds
+        record = StorageRecord(
+            type=WALLET_CONFIG_RECORD_TYPE,
+            value=json.dumps(config),
+            tags={"name": config["name"]},
+        )
+        await storage.add_record(record)
 
     return public_did

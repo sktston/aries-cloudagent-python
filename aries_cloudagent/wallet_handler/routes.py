@@ -94,7 +94,12 @@ async def wallet_handler_add_wallet(request: web.BaseRequest):
         HTTPBadRequest: if a not supported wallet type is specified.
 
     """
-    context = request.app["request_context"]
+    context = request["context"]
+
+    wallet: BaseWallet = await context.inject(BaseWallet)
+    # admin only can do this
+    if wallet.name != context.settings.get_value("wallet.name"):
+        raise web.HTTPUnauthorized(reason="only admin wallet allowed.")
 
     body = await request.json()
 
@@ -132,9 +137,13 @@ async def wallet_handler_get_wallets(request: web.BaseRequest):
 
     """
     context = request["context"]
+    wallet: BaseWallet = await context.inject(BaseWallet)
+    # admin only can do this
+    if wallet.name != context.settings.get_value("wallet.name"):
+        raise web.HTTPUnauthorized(reason="only admin wallet allowed.")
 
     wallet_handler: WalletHandler = await context.inject(WalletHandler, required=False)
-    wallet_names = await wallet_handler.get_instances()
+    wallet_names = await wallet_handler.get_instances(context)
 
     return web.json_response({"result": wallet_names})
 
@@ -156,14 +165,14 @@ async def wallet_handler_remove_wallet(request: web.BaseRequest):
     wallet_name = request.match_info["id"]
 
     wallet: BaseWallet = await context.inject(BaseWallet)
-
-    if wallet.name != wallet_name:
-        raise web.HTTPUnauthorized(reason="not owned wallet not allowed.")
+    # admin only can do this
+    if wallet.name != context.settings.get_value("wallet.name"):
+        raise web.HTTPUnauthorized(reason="only admin wallet allowed.")
 
     wallet_handler: WalletHandler = await context.inject(WalletHandler)
 
     try:
-        await wallet_handler.delete_instance(wallet_name)
+        await wallet_handler.delete_instance(wallet_name, context)
     #    raise web.HTTPBadRequest(reason="Wallet to delete not found.")
     except WalletNotFoundError:
         raise web.HTTPNotFound(reason=f"Requested wallet to delete not in storage.")
