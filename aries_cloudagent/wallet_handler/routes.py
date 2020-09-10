@@ -125,31 +125,6 @@ async def wallet_handler_get_wallets(request: web.BaseRequest):
     return web.json_response({"results": results})
 
 
-@docs(tags=["wallet"], summary="Get my wallet",)
-@response_schema(WalletRecordSchema(), 200)
-async def wallet_handler_get_my_wallet(request: web.BaseRequest):
-    """
-    Request handler to get my wallet.
-
-    Args:
-        request: aiohttp request object
-
-    """
-    context = request["context"]
-
-    wallet: BaseWallet = await context.inject(BaseWallet)
-    wallet_handler: WalletHandler = await context.inject(WalletHandler, required=False)
-    record_list = await wallet_handler.get_wallet_list(context, {"name": wallet.name})
-
-    if record_list:
-        record = record_list[0]
-        record_dict = json.loads(record.value)
-        record_dict["wallet_id"] = record.id
-        return web.json_response(record_dict)
-    else:
-        raise web.HTTPNotFound(reason="Not found the specified name of wallet.")
-
-
 @docs(tags=["wallet"], summary="Add a new wallet (admin only)",)
 @request_schema(WalletSchema())
 @response_schema(WalletRecordSchema(), 201)
@@ -253,7 +228,6 @@ async def register(app: web.Application):
     app.add_routes(
         [
             web.get("/wallet", wallet_handler_get_wallets, allow_head=False),
-            web.get("/wallet/me", wallet_handler_get_my_wallet, allow_head=False),
             web.post("/wallet", wallet_handler_add_wallet),
             web.delete("/wallet/me", wallet_handler_remove_my_wallet),
             web.delete("/wallet/{wallet_id}", wallet_handler_remove_wallet),
