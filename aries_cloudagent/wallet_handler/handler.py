@@ -147,13 +147,10 @@ class WalletHandler():
         if wallet_name not in instances:
             # wallet is not opened
             # search wallet in admin storage and open wallet if exist
-            admin_context = context.copy()
-            admin_context.settings.set_value("wallet.id", context.settings.get_value("wallet.name"))
-            record_list = await self.get_wallets(admin_context, {"name": wallet_name})
+            record_list = await self.get_wallet_list(context, {"name": wallet_name})
             if record_list:
-                # Should be only 1 record
-                for record in record_list:
-                    await self.add_instance(json.loads(record.value), admin_context)
+                record = record_list[0]
+                await self.add_instance(json.loads(record.value), context)
             else:
                 raise WalletNotFoundError('Requested not existing wallet instance.')
         context.settings.set_value("wallet.id", wallet_name)
@@ -195,7 +192,7 @@ class WalletHandler():
             key: val for key, val in self._path_mappings.items() if val != wallet_name
             }
 
-    async def get_wallets(self, context: InjectionContext, query: str = None,):
+    async def get_wallet_list(self, context: InjectionContext, query: dict = None, ):
         """
         Return list of wallets
 
@@ -203,8 +200,10 @@ class WalletHandler():
             context: Injection context.
             query: query
         """
-        # search wallets in admin storage (admin context is assumed)
-        storage: BaseStorage = await context.inject(BaseStorage)
+        # search wallets in admin storage (caller can be normal wallet, we change to admin context)
+        admin_context = context.copy()
+        admin_context.settings.set_value("wallet.id", context.settings.get_value("wallet.name"))
+        storage: BaseStorage = await admin_context.inject(BaseStorage)
         record_list = await storage.search_records(
             type_filter=WALLET_CONFIG_RECORD_TYPE,
             tag_query=query,
@@ -212,63 +211,92 @@ class WalletHandler():
 
         return record_list
 
-    async def add_wallet(self, config: dict, context: InjectionContext):
+    async def get_wallet(self, context: InjectionContext, wallet_id: str):
         """
-        Add a new wallet
+        Return a wallet
 
         Args:
-            config: Settings for the new instance.
             context: Injection context.
+            wallet_id: identifier of wallet
         """
-        # Pass default values into config
-        config["storage_type"] = self._storage_type
-        config["storage_config"] = self._storage_config
-        config["storage_creds"] = self._storage_creds
+        # search wallets in admin storage (caller can be normal wallet, we change to admin context)
+        admin_context = context.copy()
+        admin_context.settings.set_value("wallet.id", context.settings.get_value("wallet.name"))
+        storage: BaseStorage = await admin_context.inject(BaseStorage)
 
-        # add wallet config in admin storage if not exist (admin context is assumed)
-        storage: BaseStorage = await context.inject(BaseStorage)
-        try:
-            result = await storage.search_records(
-                type_filter=WALLET_CONFIG_RECORD_TYPE,
-                tag_query={"name": config["name"]},
-            ).fetch_single()
-            if result:
-                raise WalletDuplicateError()
-        except StorageNotFoundError:
-            pass
-
-        record = StorageRecord(
-            type=WALLET_CONFIG_RECORD_TYPE,
-            value=json.dumps(config),
-            tags={"name": config["name"]},
-            id=str(uuid.uuid4()),
-        )
-        await storage.add_record(record)
-
-        # open wallet if not opened
-        instances = await self.get_instances()
-        if config["name"] not in instances:
-            await self.add_instance(config, context)
-
-        return record
-
-    async def remove_wallet(self, wallet_id: str, context: InjectionContext):
-        """
-        Remove a wallet
-
-        Args:
-            wallet_id: Identifier of the instance to be deleted.
-            context: Injection context.
-        """
-        # get record to get wallet name (admin context is assumed)
-        storage = await context.inject(BaseStorage)
         try:
             record = await storage.get_record(
                 record_type=WALLET_CONFIG_RECORD_TYPE,
                 record_id=wallet_id,
             )
         except StorageNotFoundError:
-            raise WalletNotFoundError(f"specified wallet_id is not found: {wallet_id}")
+            return None
+
+        return record
+
+    async def add_wallet(self, context: InjectionContext, config: dict):
+        """
+        Add a new wallet
+
+        Args:
+            context: Injection context.
+            config: Settings for the new instance.
+        """
+        # Pass default values into config
+        config["storage_type"] = self._storage_type
+        config["storage_config"] = self._storage_config
+        config["storage_creds"] = self._storage_creds
+
+        # check wallet name is already exist
+        wallet_name = config["name"]
+        record_list = await self.get_wallet_list(context, {"name": wallet_name})
+        if record_list:
+            raise WalletDuplicateError(f"specified wallet name exist: {wallet_name}")
+
+        # add record of wallet (admin context is assumed)
+        storage: BaseStorage = await context.inject(BaseStorage)
+        record = StorageRecord(
+            type=WALLET_CONFIG_RECORD_TYPE,
+            value=json.dumps(config),
+            tags={"name": wallet_name},
+            id=str(uuid.uuid4()),
+        )
+        await storage.add_record(record)
+
+        # open wallet if not opened
+        instances = await self.get_instances()
+        if wallet_name not in instances:
+            await self.add_instance(config, context)
+
+        return record
+
+    async def remove_wallet(
+            self,
+            context: InjectionContext,
+            wallet_id: str = None,
+            wallet_name: str = None,
+    ):
+        """
+        Remove a wallet
+
+        Args:
+            context: Injection context.
+            wallet_id: Identifier of the instance to be deleted.
+            wallet_name: name of the instance to be deleted.
+        """
+        # get record
+        if wallet_id:
+            record = await self.get_wallet(context, wallet_id)
+            if not record:
+                raise WalletNotFoundError(f"specified wallet id is not found: {wallet_id}")
+        elif wallet_name:
+            record_list = await self.get_wallet_list(context, {"name": wallet_name})
+            if record_list:
+                record = record_list[0]
+            else:
+                raise WalletNotFoundError(f"specified wallet name is not found: {wallet_name}")
+        else:
+            raise WalletNotFoundError(f"wallet id or wallet id must be specified.")
 
         record_dict = json.loads(record.value)
         wallet_name = record_dict["name"]
@@ -277,10 +305,14 @@ class WalletHandler():
         if wallet_name == context.settings.get_value("wallet.name"):
             raise WalletAccessError(f"deleting admin wallet is not allowed")
 
-        # remove wallet config in admin storage
+        # delete record in admin storage (caller can be normal wallet, we change to admin context)
+        admin_context = context.copy()
+        admin_context.settings.set_value("wallet.id", context.settings.get_value("wallet.name"))
+        storage: BaseStorage = await admin_context.inject(BaseStorage)
         await storage.delete_record(record)
 
         # close wallet if opened
+        # TODO: close wallets among all aca-py servers
         instances = await self.get_instances()
         if wallet_name in instances:
             await self.delete_instance(wallet_name)
