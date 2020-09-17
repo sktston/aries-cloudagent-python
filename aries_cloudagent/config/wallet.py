@@ -100,6 +100,7 @@ async def wallet_config(context: InjectionContext, provision: bool = False):
             config["name"] = wallet.name
             config["key"] = wallet._key
             config["type"] = wallet.type
+            config["label"] = wallet.name
             config["storage_type"] = wallet._storage_type
             config["storage_config"] = wallet._storage_config
             config["storage_creds"] = wallet._storage_creds

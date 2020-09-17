@@ -27,6 +27,7 @@ from ....wallet.crypto import create_keypair, seed_to_did
 from ....wallet.error import WalletNotFoundError
 from ....wallet.util import bytes_to_b58
 from ....protocols.routing.v1_0.manager import RoutingManager
+from ....wallet_handler.error import KeyNotFoundError
 
 from ....wallet_handler.handler import WalletHandler
 
@@ -127,6 +128,15 @@ class ConnectionManager:
         """
         if not my_label:
             my_label = self.context.settings.get("default_label")
+            # get label for wallet if exist
+            ext_plugins = self.context.settings.get_value("external_plugins")
+            if ext_plugins and 'aries_cloudagent.wallet_handler' in ext_plugins:
+                wallet_handler: WalletHandler = await self.context.inject(WalletHandler)
+                try:
+                    my_label = await wallet_handler.get_label_for_wallet(self.context.settings.get_value("wallet.id"))
+                except KeyNotFoundError:
+                    pass
+
         wallet: BaseWallet = await self.context.inject(BaseWallet)
 
         if public:
@@ -324,6 +334,15 @@ class ConnectionManager:
         )
         if not my_label:
             my_label = self.context.settings.get("default_label")
+            # get label for wallet if exist
+            ext_plugins = self.context.settings.get_value("external_plugins")
+            if ext_plugins and 'aries_cloudagent.wallet_handler' in ext_plugins:
+                wallet_handler: WalletHandler = await self.context.inject(WalletHandler)
+                try:
+                    my_label = await wallet_handler.get_label_for_wallet(self.context.settings.get_value("wallet.id"))
+                except KeyNotFoundError:
+                    pass
+
         request = ConnectionRequest(
             label=my_label,
             connection=ConnectionDetail(did=connection.my_did, did_doc=did_doc),

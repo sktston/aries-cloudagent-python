@@ -58,12 +58,19 @@ async def create_connection_handle(wallet: BaseWallet, n: int) -> str:
     return path
 
 
+class WalletUpdateSchema(Schema):
+    """schema for updating a wallet."""
+
+    label = fields.Str(required=True, description="my name when connection is established", example='faber',)
+
+
 class WalletSchema(Schema):
     """schema for adding a new wallet which will be registered by the agent."""
 
     name = fields.Str(required=True, description="wallet name", example='faber',)
     key = fields.Str(required=True, description="master key used for key derivation", example='faber.key.123',)
     type = fields.Str(required=True, description="type of wallet [basic | indy]",example='indy',)
+    label = fields.Str(required=False, description="my name when connection is established", example='faber',)
 
 
 class WalletRecordSchema(WalletSchema):
@@ -149,7 +156,10 @@ async def wallet_handler_add_wallet(request: web.BaseRequest):
 
     body = await request.json()
 
-    config = {"name": body.get("name"), "key": body.get("key"), "type": body.get("type")}
+    config = {"name": body.get("name"), "key": body.get("key"), "type": body.get("type"), "label": body.get("label")}
+    if not config["label"]:
+        config["label"] = config["name"]
+
     if config["type"] not in WALLET_TYPES:
         raise web.HTTPBadRequest(reason="Specified wallet type is not supported.")
 
@@ -222,6 +232,34 @@ async def wallet_handler_remove_my_wallet(request: web.BaseRequest):
     return web.Response(status=204)
 
 
+@docs(tags=["wallet"], summary="Update my wallet",)
+@request_schema(WalletUpdateSchema())
+@response_schema(WalletRecordSchema(), 200)
+async def wallet_handler_update_my_wallet(request: web.BaseRequest):
+    """
+    Request handler to update my wallet from agent and storage.
+
+    Args:
+        request: aiohttp request object.
+
+    """
+    context = request["context"]
+    body = await request.json()
+    my_label = body.get("label")
+
+    wallet: BaseWallet = await context.inject(BaseWallet)
+    wallet_handler: WalletHandler = await context.inject(WalletHandler, required=False)
+
+    try:
+        record = await wallet_handler.update_wallet(context=context, my_label=my_label, wallet_name=wallet.name)
+    except WalletNotFoundError as err:
+        raise web.HTTPNotFound(reason=err.roll_up) from err
+
+    record_dict = json.loads(record.value)
+    record_dict["wallet_id"] = record.id
+    return web.json_response(record_dict, status=200)
+
+
 async def register(app: web.Application):
     """Register routes."""
 
@@ -229,6 +267,7 @@ async def register(app: web.Application):
         [
             web.get("/wallet", wallet_handler_get_wallets, allow_head=False),
             web.post("/wallet", wallet_handler_add_wallet),
+            web.put("/wallet/me", wallet_handler_update_my_wallet),
             web.delete("/wallet/me", wallet_handler_remove_my_wallet),
             web.delete("/wallet/{wallet_id}", wallet_handler_remove_wallet),
         ]

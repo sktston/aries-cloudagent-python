@@ -81,6 +81,8 @@ class WalletHandler():
         self._handled_keys = {}
         # Maps: `connection_id` -> `wallet`
         self._connections = {}
+        # Maps: `wallet` -> `label`
+        self._labels = {}
 
         self._provider = provider
 
@@ -140,6 +142,18 @@ class WalletHandler():
         connections = [record.serialize() for record in records]
         for connection in connections:
             await self.add_connection(connection["connection_id"], config["name"])
+
+        self._labels[config["name"]] = config["label"]
+
+    async def update_instance(self, config: dict, context: InjectionContext):
+        """
+        Add a new instance to the handler to be used during runtime.
+
+        Args:
+            config: Settings for the updating instance.
+            context: Injection context.
+        """
+        self._labels[config["name"]] = config["label"]
 
     async def set_instance(self, wallet_name: str, context: InjectionContext):
         """Set a specific wallet to open by the provider."""
@@ -317,6 +331,51 @@ class WalletHandler():
         if wallet_name in instances:
             await self.delete_instance(wallet_name)
 
+    async def update_wallet(
+            self,
+            context: InjectionContext,
+            my_label: str,
+            wallet_id: str = None,
+            wallet_name: str = None,
+    ):
+        """
+        Remove a wallet
+
+        Args:
+            context: Injection context.
+            my_label: my label.
+            wallet_id: Identifier of the instance to be deleted.
+            wallet_name: name of the instance to be deleted.
+        """
+        # get record
+        if wallet_id:
+            record = await self.get_wallet(context, wallet_id)
+            if not record:
+                raise WalletNotFoundError(f"specified wallet id is not found: {wallet_id}")
+        elif wallet_name:
+            record_list = await self.get_wallet_list(context, {"name": wallet_name})
+            if record_list:
+                record = record_list[0]
+            else:
+                raise WalletNotFoundError(f"specified wallet name is not found: {wallet_name}")
+        else:
+            raise WalletNotFoundError(f"wallet id or wallet id must be specified.")
+
+        config = json.loads(record.value)
+        config["label"] = my_label
+
+        # update record in admin storage (caller can be normal wallet, we change to admin context)
+        admin_context = context.copy()
+        admin_context.settings.set_value("wallet.id", context.settings.get_value("wallet.name"))
+        storage: BaseStorage = await admin_context.inject(BaseStorage)
+        await storage.update_record_value(record, json.dumps(config))
+        record = await self.get_wallet(context, record.id)
+
+        # update instance
+        await self.update_instance(config, context)
+
+        return record
+
     async def generate_path_mapping(self, wallet_id: str, did: str = None) -> str:
         """
         Create and store new path mapped to the currently active wallet.
@@ -475,3 +534,19 @@ class WalletHandler():
             raise KeyNotFoundError()
 
         return self._handled_keys[key]
+
+    async def get_label_for_wallet(self, wallet: str) -> str:
+        """
+        Return the identifier of the wallet to which the given key belongs.
+
+        Args:
+            wallet: wallet name for which the label shall be returned.
+
+        Raises:
+            KeyNotFoundError: if given wallet does not belong to _labels
+
+        """
+        if wallet not in self._labels.keys():
+            raise KeyNotFoundError()
+
+        return self._labels[wallet]
