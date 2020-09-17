@@ -11,6 +11,7 @@ from .handler import WalletHandler
 from .error import WalletNotFoundError, WalletAccessError
 from ..messaging.models.openapi import OpenAPISchema
 from ..messaging.valid import UUIDFour
+from ..storage.record import StorageRecord
 from ..wallet.base import BaseWallet
 from ..wallet.error import WalletError, WalletDuplicateError
 
@@ -77,9 +78,6 @@ class WalletRecordSchema(WalletSchema):
     """Schema for a wallet record."""
 
     wallet_id = fields.Str(description="wallet identifier", example=UUIDFour.EXAMPLE,)
-    storage_type = fields.Str(description="storage type", example=None,)
-    storage_config = fields.Str(description="storage config", example=None,)
-    storage_creds = fields.Str(description="storage creds", example=None,)
 
 
 class WalletRecordListSchema(Schema):
@@ -98,6 +96,22 @@ class WalletRecordListQueryStringSchema(OpenAPISchema):
     """Parameters and validators for wallet list request query string."""
 
     name = fields.Str(description="wallet name of interest", required=False, example="faber")
+
+
+def get_wallet_record(record: StorageRecord):
+    """
+    Get wallet record from StorageRecord.
+
+    Args:
+        record: StorageRecord.
+    """
+    wallet_record = json.loads(record.value)
+    del wallet_record["storage_type"]
+    del wallet_record["storage_config"]
+    del wallet_record["storage_creds"]
+    wallet_record["wallet_id"] = record.id
+
+    return wallet_record
 
 
 @docs(tags=["wallet"], summary="Get a list of wallets (admin only)",)
@@ -126,9 +140,8 @@ async def wallet_handler_get_wallets(request: web.BaseRequest):
 
     results = []
     for record in record_list:
-        record_dict = json.loads(record.value)
-        record_dict["wallet_id"] = record.id
-        results.append(record_dict)
+        wallet_record = get_wallet_record(record)
+        results.append(wallet_record)
     return web.json_response({"results": results})
 
 
@@ -150,11 +163,10 @@ async def wallet_handler_get_my_wallet(request: web.BaseRequest):
 
     if record_list:
         record = record_list[0]
-        record_dict = json.loads(record.value)
-        record_dict["wallet_id"] = record.id
-        return web.json_response(record_dict)
     else:
         raise web.HTTPNotFound(reason="Not found the specified name of wallet.")
+
+    return web.json_response(get_wallet_record(record))
 
 
 @docs(tags=["wallet"], summary="Add a new wallet (admin only)",)
@@ -194,9 +206,7 @@ async def wallet_handler_add_wallet(request: web.BaseRequest):
     except WalletDuplicateError as err:
         raise web.HTTPBadRequest(reason=err.roll_up) from err
 
-    record_dict = json.loads(record.value)
-    record_dict["wallet_id"] = record.id
-    return web.json_response(record_dict, status=201)
+    return web.json_response(get_wallet_record(record), status=201)
 
 
 @docs(tags=["wallet"], summary="Remove a wallet (admin only)",)
@@ -280,9 +290,7 @@ async def wallet_handler_update_my_wallet(request: web.BaseRequest):
     except WalletNotFoundError as err:
         raise web.HTTPNotFound(reason=err.roll_up) from err
 
-    record_dict = json.loads(record.value)
-    record_dict["wallet_id"] = record.id
-    return web.json_response(record_dict, status=200)
+    return web.json_response(get_wallet_record(record))
 
 
 async def register(app: web.Application):
