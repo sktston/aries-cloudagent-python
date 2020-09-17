@@ -312,8 +312,8 @@ class WalletHandler():
         else:
             raise WalletNotFoundError(f"wallet id or wallet id must be specified.")
 
-        record_dict = json.loads(record.value)
-        wallet_name = record_dict["name"]
+        config = json.loads(record.value)
+        wallet_name = config["name"]
 
         # can not delete admin wallet
         if wallet_name == context.settings.get_value("wallet.name"):

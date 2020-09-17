@@ -639,9 +639,9 @@ class AdminServer(BaseAdminServer):
 
         results = []
         for record in record_list:
-            record_dict = json.loads(record.value)
-            record_dict["webhook_id"] = record.id
-            results.append(record_dict)
+            webhook_record = json.loads(record.value)
+            webhook_record["webhook_id"] = record.id
+            results.append(webhook_record)
         return web.json_response({"results": results})
 
     @docs(tags=["server"], summary="Get a webhook target.")
@@ -665,9 +665,9 @@ class AdminServer(BaseAdminServer):
         if not record:
             raise web.HTTPBadRequest(reason="webhook target of specified webhook_id does not exists.")
 
-        record_dict = json.loads(record.value)
-        record_dict["webhook_id"] = record.id
-        return web.json_response(record_dict)
+        webhook_record = json.loads(record.value)
+        webhook_record["webhook_id"] = record.id
+        return web.json_response(webhook_record)
 
     @docs(tags=["server"], summary="Add a new webhook target.")
     @request_schema(WebhookTargetSchema())
@@ -691,9 +691,9 @@ class AdminServer(BaseAdminServer):
         if not record:
             raise web.HTTPBadRequest(reason="webhook target of specified target_url already exists.")
 
-        record_dict = json.loads(record.value)
-        record_dict["webhook_id"] = record.id
-        return web.json_response(record_dict, status=201)
+        webhook_record = json.loads(record.value)
+        webhook_record["webhook_id"] = record.id
+        return web.json_response(webhook_record, status=201)
 
     @docs(tags=["server"], summary="Remove a webhook target.")
     @match_info_schema(WebhookIdMatchInfoSchema())
