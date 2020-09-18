@@ -17,6 +17,7 @@ import indy.pool
 from indy.error import IndyError, ErrorCode
 
 from ..cache.base import BaseCache
+from ..config.injection_context import InjectionContext
 from ..issuer.base import BaseIssuer, IssuerError, DEFAULT_CRED_DEF_TAG
 from ..indy.error import IndyErrorHandler
 from ..messaging.credential_definitions.util import CRED_DEF_SENT_RECORD_TYPE
@@ -853,7 +854,13 @@ class IndyLedger(BaseLedger):
         return False
 
     async def register_nym(
-        self, did: str, verkey: str, alias: str = None, role: str = None
+            self,
+            did: str,
+            verkey: str,
+            alias: str = None,
+            role: str = None,
+            target_wallet: str = None,
+            context: InjectionContext = None
     ):
         """
         Register a nym on the ledger.
@@ -863,6 +870,8 @@ class IndyLedger(BaseLedger):
             verkey: The verification key of the keypair.
             alias: Human-friendly alias to assign to the DID.
             role: For permissioned ledgers, what role should the new DID have.
+            target_wallet: wallet name owned did.
+            context: Injection context.
         """
         if self.read_only:
             raise LedgerError(
@@ -878,9 +887,18 @@ class IndyLedger(BaseLedger):
 
         await self._submit(request_json)
 
-        did_info = await self.wallet.get_local_did(did)
+        # if target_wallet exist try to use target_wallet
+        wallet: BaseWallet = self.wallet
+        if target_wallet:
+            ext_plugins = context.settings.get_value("external_plugins")
+            if ext_plugins and 'aries_cloudagent.wallet_handler' in ext_plugins:
+                target_context = context.copy()
+                target_context.settings.set_value("wallet.id", target_wallet)
+                wallet = await target_context.inject(BaseWallet)
+
+        did_info = await wallet.get_local_did(did)
         metadata = {**did_info.metadata, **DIDPosture.POSTED.metadata}
-        await self.wallet.replace_local_did_metadata(did, metadata)
+        await wallet.replace_local_did_metadata(did, metadata)
 
     async def get_nym_role(self, did: str) -> Role:
         """
@@ -948,6 +966,7 @@ class IndyLedger(BaseLedger):
         txn_data_data = txn_resp_data["txn"]["data"]
         role_token = Role.get(txn_data_data.get("role")).token()
         alias = txn_data_data.get("alias")
+        # FIXME: not sure below is work in case of multitenancy
         await self.register_nym(public_did, verkey, role_token, alias)
 
         # update wallet

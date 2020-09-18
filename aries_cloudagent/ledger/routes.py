@@ -85,6 +85,9 @@ class RegisterLedgerNymQueryStringSchema(OpenAPISchema):
             [r.name for r in Role if isinstance(r.value[0], int)] + ["reset"]
         ),
     )
+    target_wallet = fields.Str(
+        description="wallet name owned the did (if not requester wallet name used)", required=False, example="faber",
+    )
 
 
 class QueryStringDIDSchema(OpenAPISchema):
@@ -137,11 +140,12 @@ async def register_ledger_nym(request: web.BaseRequest):
     role = request.query.get("role")
     if role == "reset":  # indy: empty to reset, null for regular user
         role = ""  # visually: confusing - correct 'reset' to empty string here
+    target_wallet = request.query.get("target_wallet") or None
 
     success = False
     async with ledger:
         try:
-            await ledger.register_nym(did, verkey, alias, role)
+            await ledger.register_nym(did, verkey, alias, role, target_wallet, context)
             success = True
         except LedgerTransactionError as err:
             raise web.HTTPForbidden(reason=err.roll_up)
