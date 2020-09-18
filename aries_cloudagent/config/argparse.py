@@ -579,7 +579,9 @@ class ProtocolGroup(ArgumentGroup):
             help="Write timing information to a given log file.",
         )
         parser.add_argument(
-            "--trace", action="store_true", help="Generate tracing events.",
+            "--trace",
+            action="store_true",
+            help="Generate tracing events.",
         )
         parser.add_argument(
             "--trace-target",
@@ -603,6 +605,13 @@ class ProtocolGroup(ArgumentGroup):
             "--preserve-exchange-records",
             action="store_true",
             help="Keep credential exchange records after exchange has completed.",
+        )
+        parser.add_argument(
+            "--emit-old-didcomm-prefix",
+            action="store_true",
+            help="Emit protocol messages with old DIDComm prefix; i.e.,\
+            'did:sov:BzCbsNYhMrjHiqZDTUASHg;spec/' instead of (default) prefix\
+            'https://didcomm.org/'.",
         )
 
     def get_settings(self, args: Namespace) -> dict:
@@ -652,6 +661,8 @@ class ProtocolGroup(ArgumentGroup):
                 raise ArgsParseError("Error writing trace event " + str(e))
         if args.preserve_exchange_records:
             settings["preserve_exchange_records"] = True
+        if args.emit_old_didcomm_prefix:
+            settings["emit_old_didcomm_prefix"] = True
         return settings
 
 
@@ -797,7 +808,7 @@ class WalletGroup(ArgumentGroup):
             metavar="<storage-type>",
             help="Specifies the type of Indy wallet backend to use.\
             Supported internal storage types are 'basic' (memory),\
-            'indy', and 'postgres_storage'.",
+            'default' (sqlite), and 'postgres_storage'.",
         )
         parser.add_argument(
             "--wallet-storage-config",

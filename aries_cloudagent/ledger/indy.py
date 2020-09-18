@@ -25,6 +25,7 @@ from ..storage.base import StorageRecord
 from ..storage.indy import IndyStorage
 from ..utils import sentinel
 from ..wallet.base import BaseWallet, DIDInfo
+from ..wallet.did_posture import DIDPosture
 
 from .base import BaseLedger
 from .endpoint_type import EndpointType
@@ -368,7 +369,10 @@ class IndyLedger(BaseLedger):
 
             try:
                 schema_id, schema_json = await issuer.create_and_store_schema(
-                    public_info.did, schema_name, schema_version, attribute_names,
+                    public_info.did,
+                    schema_name,
+                    schema_version,
+                    attribute_names,
                 )
             except IssuerError as err:
                 raise LedgerError(err.message) from err
@@ -620,7 +624,11 @@ class IndyLedger(BaseLedger):
                     credential_definition_id,
                     credential_definition_json,
                 ) = await issuer.create_and_store_credential_definition(
-                    public_info.did, schema, signature_type, tag, support_revocation,
+                    public_info.did,
+                    schema,
+                    signature_type,
+                    tag,
+                    support_revocation,
                 )
             except IssuerError as err:
                 raise LedgerError(err.message) from err
@@ -869,6 +877,10 @@ class IndyLedger(BaseLedger):
             )
 
         await self._submit(request_json)
+
+        did_info = await self.wallet.get_local_did(did)
+        metadata = {**did_info.metadata, **DIDPosture.POSTED.metadata}
+        await self.wallet.replace_local_did_metadata(did, metadata)
 
     async def get_nym_role(self, did: str) -> Role:
         """
