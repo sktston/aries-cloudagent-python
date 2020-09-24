@@ -9,6 +9,7 @@ import indy.anoncreds
 import indy.did
 import indy.crypto
 import hashlib
+import logging
 from indy.error import IndyError, ErrorCode
 from base64 import b64encode, b64decode
 
@@ -26,11 +27,13 @@ from ..config.injection_context import InjectionContext
 from ..connections.models.connection_record import (
     ConnectionRecord,
 )
+from ..cache.base import BaseCache
 
 from .error import KeyNotFoundError, WalletAccessError
 from .error import WalletNotFoundError
 from .error import DuplicateMappingError
 
+LOGGER = logging.getLogger(__name__)
 
 class WalletHandler():
     """Class to handle multiple wallets."""
@@ -106,8 +109,23 @@ class WalletHandler():
 
         wallet = ClassLoader.load_class(wallet_class)(config)
         await wallet.open()
+
         storage = ClassLoader.load_class(self.DEFAULT_STORAGE_CLASS)(wallet)
-        ledger = ClassLoader.load_class(self.DEFAULT_LEDGER_CLASS)("default", wallet)
+
+        # create ledger for new wallet
+        pool_name = wallet.name
+        keepalive = int(context.settings.get("ledger.keepalive", 5))
+        IndyLedger = ClassLoader.load_class(self.DEFAULT_LEDGER_CLASS)
+        cache = await context.inject(BaseCache, required=False)
+        ledger = IndyLedger(
+            pool_name, wallet, keepalive=keepalive, cache=cache
+        )
+        genesis_transactions = context.settings.get("ledger.genesis_transactions")
+        if genesis_transactions:
+            await ledger.create_pool_config(genesis_transactions, True)
+        elif not await ledger.check_pool_config():
+            LOGGER.info("Ledger pool configuration has not been created")
+            ledger = None
 
         # Store wallet in wallet provider.
         # FIXME: might be possible  to handle cleaner?
