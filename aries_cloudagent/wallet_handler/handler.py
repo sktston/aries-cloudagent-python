@@ -38,10 +38,6 @@ LOGGER = logging.getLogger(__name__)
 class WalletHandler():
     """Class to handle multiple wallets."""
 
-    WALLET_CLASSES = {
-        "basic": "aries_cloudagent.wallet.basic.BasicWallet",
-        "indy": "aries_cloudagent.wallet.indy.IndyWallet",
-    }
     DEFAULT_KEY = ""
     DEFAULT_KEY_DERIVIATION = "ARGON2I_MOD"
     DEFAULT_NAME = "default"
@@ -101,15 +97,13 @@ class WalletHandler():
             config: Settings for the new instance.
             context: Injection context.
         """
-        wallet_type = config['type'] or self.DEFAULT_WALLET_CLASS
-        wallet_class = self.WALLET_CLASSES[wallet_type]
-
         if config["name"] in self._provider._instances.keys():
             raise WalletDuplicateError()
 
-        wallet = ClassLoader.load_class(wallet_class)(config)
+        wallet = ClassLoader.load_class(self.DEFAULT_WALLET_CLASS)(config)
         await wallet.open()
 
+        # create storage for new wallet
         storage = ClassLoader.load_class(self.DEFAULT_STORAGE_CLASS)(wallet)
 
         # create ledger for new wallet

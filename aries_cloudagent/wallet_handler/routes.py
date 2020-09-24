@@ -37,7 +37,6 @@ from ..protocols.connections.v1_0.messages.connection_invitation import (
 from marshmallow import fields, Schema
 
 WALLET_TYPES = {
-    "basic": "aries_cloudagent.wallet.basic.BasicWallet",
     "indy": "aries_cloudagent.wallet.indy.IndyWallet",
 }
 
@@ -70,7 +69,7 @@ class WalletSchema(Schema):
 
     name = fields.Str(required=True, description="wallet name", example='faber',)
     key = fields.Str(required=True, description="master key used for key derivation", example='faber.key.123',)
-    type = fields.Str(required=True, description="type of wallet [basic | indy]",example='indy',)
+    type = fields.Str(required=True, description="type of wallet [indy]", example='indy',)
     label = fields.Str(required=False, description="my name when connection is established", example='faber',)
 
 
