@@ -122,9 +122,7 @@ class WalletHandler():
             ledger = None
 
         # Store wallet in wallet provider.
-        # FIXME: might be possible  to handle cleaner?
-        # FIXME: Delete storage and ledger if wallet is closed, is it possible to reopen?
-        # FIXME: What  about `holder`, `issuer`, etc?
+        # Store storage and ledger in dynamic provider
         self._provider._instances[wallet.name] = wallet
         storage_provider = context.injector._providers[BaseStorage]
         storage_provider._instances[wallet.name] = storage
@@ -181,16 +179,23 @@ class WalletHandler():
                 raise WalletNotFoundError('Requested not existing wallet instance.')
         context.settings.set_value("wallet.id", wallet_name)
 
-    async def delete_instance(self, wallet_name: str):
+    async def delete_instance(self, context: InjectionContext, wallet_name: str):
         """
         Delete handled instance from handler and storage.
 
         Args:
+            context: Injection context.
             wallet_name: Identifier of the instance to be deleted.
         """
 
         try:
+            # Remove wallet in wallet provider.
+            # Remove storage and ledger in dynamic provider
             wallet = self._provider._instances.pop(wallet_name)
+            storage_provider = context.injector._providers[BaseStorage]
+            storage_provider._instances.pop(wallet_name)
+            ledger_provider = context.injector._providers[BaseLedger]
+            ledger_provider._instances.pop(wallet_name)
         except KeyError:
             raise WalletNotFoundError(f"Wallet not found: {wallet_name}")
 
@@ -341,7 +346,7 @@ class WalletHandler():
         # TODO: close wallets among all aca-py servers
         instances = await self.get_instances()
         if wallet_name in instances:
-            await self.delete_instance(wallet_name)
+            await self.delete_instance(context, wallet_name)
 
     async def update_wallet(
             self,
