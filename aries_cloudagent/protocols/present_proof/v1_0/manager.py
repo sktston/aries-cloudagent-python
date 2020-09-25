@@ -587,7 +587,9 @@ class PresentationManager:
             self.context, reason="verify presentation"
         )
 
-        await self.send_presentation_ack(presentation_exchange_record)
+        # FIXME: do not send ack temporarily in case of initial platform to prevent unprocessing error in trinsic wallet
+        if self.context.settings.get_value("default_label") != "ACA-Py Agent (Multi-Tenant)":
+            await self.send_presentation_ack(presentation_exchange_record)
         return presentation_exchange_record
 
     async def send_presentation_ack(
