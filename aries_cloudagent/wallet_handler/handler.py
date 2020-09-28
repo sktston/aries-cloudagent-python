@@ -82,6 +82,8 @@ class WalletHandler():
         self._connections = {}
         # Maps: `wallet` -> `label`
         self._labels = {}
+        # Maps: `wallet` -> `image_url`
+        self._image_urls = {}
 
         self._provider = provider
 
@@ -154,6 +156,7 @@ class WalletHandler():
             await self.add_connection(connection["connection_id"], config["name"])
 
         self._labels[config["name"]] = config["label"]
+        self._image_urls[config["name"]] = config["image_url"]
 
     async def update_instance(self, config: dict, context: InjectionContext):
         """
@@ -164,6 +167,7 @@ class WalletHandler():
             context: Injection context.
         """
         self._labels[config["name"]] = config["label"]
+        self._image_urls[config["name"]] = config["image_url"]
 
     async def set_instance(self, wallet_name: str, context: InjectionContext):
         """Set a specific wallet to open by the provider."""
@@ -190,14 +194,23 @@ class WalletHandler():
 
         try:
             # Remove wallet in wallet provider.
-            # Remove storage and ledger in dynamic provider
             wallet = self._provider._instances.pop(wallet_name)
+        except KeyError:
+            raise WalletNotFoundError(f"Wallet not found: {wallet_name}")
+
+        try:
+            # Remove storage in dynamic provider
             storage_provider = context.injector._providers[BaseStorage]
             storage_provider._instances.pop(wallet_name)
+        except KeyError:
+            raise WalletNotFoundError(f"storage_provider of wallet name {wallet_name} is not found")
+
+        try:
+            # Remove ledger in dynamic provider
             ledger_provider = context.injector._providers[BaseLedger]
             ledger_provider._instances.pop(wallet_name)
         except KeyError:
-            raise WalletNotFoundError(f"Wallet not found: {wallet_name}")
+            raise WalletNotFoundError(f"ledger_provider of wallet name {wallet_name} is not found")
 
         if wallet.WALLET_TYPE == 'indy':
             # Delete wallet from storage.
@@ -222,6 +235,18 @@ class WalletHandler():
         self._connections = {
             key: val for key, val in self._path_mappings.items() if val != wallet_name
             }
+
+        try:
+            # Remove label in wallet provider.
+            self._labels.pop(wallet_name)
+        except KeyError:
+            raise WalletNotFoundError(f"label of wallet name {wallet_name} is not found")
+
+        try:
+            # Remove label in wallet provider.
+            self._image_urls.pop(wallet_name)
+        except KeyError:
+            raise WalletNotFoundError(f"image_url of wallet name {wallet_name} is not found")
 
     async def get_wallet_list(self, context: InjectionContext, query: dict = None, ):
         """
