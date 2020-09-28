@@ -61,7 +61,9 @@ async def create_connection_handle(wallet: BaseWallet, n: int) -> str:
 class WalletUpdateSchema(Schema):
     """schema for updating a wallet."""
 
-    label = fields.Str(required=True, description="my name when connection is established", example='faber',)
+    label = fields.Str(required=False, description="my name when connection is established", example='faber',)
+    image_url = fields.Str(required=False, description="Optional image URL for connection invitation",
+                           example="http://image_url/logo.jpg",)
 
 
 class WalletSchema(Schema):
@@ -71,6 +73,8 @@ class WalletSchema(Schema):
     key = fields.Str(required=True, description="master key used for key derivation", example='faber.key.123',)
     type = fields.Str(required=True, description="type of wallet [indy]", example='indy',)
     label = fields.Str(required=False, description="my name when connection is established", example='faber',)
+    image_url = fields.Str(required=False, description="Optional image URL for connection invitation",
+                           example="http://image_url/logo.jpg",)
 
 
 class WalletRecordSchema(WalletSchema):
@@ -192,7 +196,8 @@ async def wallet_handler_add_wallet(request: web.BaseRequest):
 
     body = await request.json()
 
-    config = {"name": body.get("name"), "key": body.get("key"), "type": body.get("type"), "label": body.get("label")}
+    config = {"name": body.get("name"), "key": body.get("key"), "type": body.get("type"),
+              "label": body.get("label"), "image_url": body.get("image_url")}
     if not config["label"]:
         config["label"] = config["name"]
 
@@ -280,12 +285,19 @@ async def wallet_handler_update_my_wallet(request: web.BaseRequest):
     context = request["context"]
     body = await request.json()
     my_label = body.get("label")
+    image_url = body.get("image_url")
+    if not my_label and not image_url:
+        raise web.HTTPBadRequest(reason="At least one parameter is required.")
 
     wallet: BaseWallet = await context.inject(BaseWallet)
     wallet_handler: WalletHandler = await context.inject(WalletHandler, required=False)
 
     try:
-        record = await wallet_handler.update_wallet(context=context, my_label=my_label, wallet_name=wallet.name)
+        record = await wallet_handler.update_wallet(
+            context=context,
+            my_label=my_label,
+            image_url=image_url,
+            wallet_name=wallet.name)
     except WalletNotFoundError as err:
         raise web.HTTPNotFound(reason=err.roll_up) from err
 

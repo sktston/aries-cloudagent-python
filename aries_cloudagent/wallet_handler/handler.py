@@ -351,7 +351,8 @@ class WalletHandler():
     async def update_wallet(
             self,
             context: InjectionContext,
-            my_label: str,
+            my_label: str = None,
+            image_url: str = None,
             wallet_id: str = None,
             wallet_name: str = None,
     ):
@@ -361,6 +362,7 @@ class WalletHandler():
         Args:
             context: Injection context.
             my_label: my label.
+            image_url: my image url.
             wallet_id: Identifier of the instance to be deleted.
             wallet_name: name of the instance to be deleted.
         """
@@ -379,7 +381,10 @@ class WalletHandler():
             raise WalletNotFoundError(f"wallet id or wallet id must be specified.")
 
         config = json.loads(record.value)
-        config["label"] = my_label
+        if my_label:
+            config["label"] = my_label
+        if image_url:
+            config["image_url"] = image_url
 
         # update record in admin storage (caller can be normal wallet, we change to admin context)
         admin_context = context.copy()
