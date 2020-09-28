@@ -230,10 +230,10 @@ class WalletHandler():
             key: val for key, val in self._path_mappings.items() if val != wallet_name
             }
         self._handled_keys = {
-            key: val for key, val in self._path_mappings.items() if val != wallet_name
+            key: val for key, val in self._handled_keys.items() if val != wallet_name
             }
         self._connections = {
-            key: val for key, val in self._path_mappings.items() if val != wallet_name
+            key: val for key, val in self._connections.items() if val != wallet_name
             }
 
         try:
