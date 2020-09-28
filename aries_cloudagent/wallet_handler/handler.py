@@ -584,16 +584,32 @@ class WalletHandler():
 
     async def get_label_for_wallet(self, wallet: str) -> str:
         """
-        Return the identifier of the wallet to which the given key belongs.
+        Return the label of the wallet to which the given wallet name.
 
         Args:
             wallet: wallet name for which the label shall be returned.
 
         Raises:
-            KeyNotFoundError: if given wallet does not belong to _labels
+            KeyNotFoundError: if given wallet does not exist in _labels
 
         """
         if wallet not in self._labels.keys():
             raise KeyNotFoundError()
 
         return self._labels[wallet]
+
+    async def get_image_url_for_wallet(self, wallet: str) -> str:
+        """
+        Return the image_url of the wallet to which the given wallet name.
+
+        Args:
+            wallet: wallet name for which the image_url shall be returned.
+
+        Raises:
+            KeyNotFoundError: if given wallet does not exist in _image_urls
+
+        """
+        if wallet not in self._image_urls.keys():
+            raise KeyNotFoundError()
+
+        return self._image_urls[wallet]

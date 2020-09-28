@@ -135,6 +135,16 @@ class ConnectionManager:
                 except KeyNotFoundError:
                     pass
 
+        image_url = None
+        # get image_url for wallet if exist
+        ext_plugins = self.context.settings.get_value("external_plugins")
+        if ext_plugins and 'aries_cloudagent.wallet_handler' in ext_plugins:
+            wallet_handler: WalletHandler = await self.context.inject(WalletHandler)
+            try:
+                image_url = await wallet_handler.get_image_url_for_wallet(self.context.settings.get_value("wallet.id"))
+            except KeyNotFoundError:
+                pass
+
         wallet: BaseWallet = await self.context.inject(BaseWallet)
 
         if public:
@@ -154,7 +164,7 @@ class ConnectionManager:
 
             # FIXME - allow ledger instance to format public DID with prefix?
             invitation = ConnectionInvitation(
-                label=my_label, did=f"did:sov:{public_did.did}"
+                label=my_label, did=f"did:sov:{public_did.did}", image_url=image_url
             )
             return None, invitation
 
@@ -196,7 +206,7 @@ class ConnectionManager:
         # Note: Need to split this into two stages to support inbound routing of invites
         # Would want to reuse create_did_document and convert the result
         invitation = ConnectionInvitation(
-            label=my_label, recipient_keys=[connection_key.verkey], endpoint=my_endpoint
+            label=my_label, recipient_keys=[connection_key.verkey], endpoint=my_endpoint, image_url=image_url
         )
         await connection.attach_invitation(self.context, invitation)
 
