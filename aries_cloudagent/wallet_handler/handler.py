@@ -74,8 +74,6 @@ class WalletHandler():
         if self._storage_type == "postgres_storage":
             load_postgres_plugin(self._storage_config, self._storage_creds)
 
-        # Maps: `inbound path` -> `wallet`
-        self._path_mappings = {}
         # Maps: `verkey` -> `wallet`
         self._handled_keys = {}
         # Maps: `connection_id` -> `wallet`
@@ -135,11 +133,6 @@ class WalletHandler():
         dids = await wallet.get_local_dids()
         for did in dids:
             self._handled_keys[did.verkey] = wallet.name
-            # Get path matppings of wallet (path, wallet.name).
-            if did.metadata.get('path'):
-                path = did.metadata['path']
-                self.add_path_mapping(
-                    wallet.name, path)
 
         # Without changing the requested instance, the storage provider
         # picks up the correct wallet for fetching the connections.
@@ -225,10 +218,7 @@ class WalletHandler():
                     raise WalletNotFoundError(f"Wallet not found: {wallet_name}")
                 raise WalletError(str(x_indy))
 
-        # Remove all path mappings of wallet.
-        self._path_mappings = {
-            key: val for key, val in self._path_mappings.items() if val != wallet_name
-            }
+        # Remove all mappings of wallet.
         self._handled_keys = {
             key: val for key, val in self._handled_keys.items() if val != wallet_name
             }
@@ -423,66 +413,6 @@ class WalletHandler():
 
         return record
 
-    async def generate_path_mapping(self, wallet_id: str, did: str = None) -> str:
-        """
-        Create and store new path mapped to the currently active wallet.
-
-        Args:
-            wallet_id: Identifier of the wallet for which a new path mapping
-                    shall be generated.
-            did: DID for which the path is generated.
-            key: [if no did] Key used as random input to generrate path mapping.
-
-        Returns:
-            path: path to use as postfix to add to default endpoint
-
-        """
-        if did:
-            digest = hashlib.sha256(str.encode(did)).digest()
-        else:
-            t = time.time()
-            digest = hashlib.sha256(str.encode(str(t) + wallet_id)).digest()
-
-        id = b64encode(digest).decode()
-        # Clear all special characters
-        path = re.sub('[^a-zA-Z0-9 \n]', '', id)
-        self._path_mappings[path] = wallet_id
-
-        # Store endpoint in did metadata
-        # TODO: check for old path in metadata.
-        # TODO: Add to metadata if already exist.
-        if did:
-            wallet = self._provider._instances[wallet_id]
-            metadata = {"path": path}
-            await wallet.replace_local_did_metadata(did, metadata)
-
-        return path
-
-    def add_path_mapping(self, wallet_id, path):
-        """Store a new path mapping.
-
-        Args:
-            wallet_id: Identifier of wallet for which to add the new mapping.
-            path: Path which shall be mapped to the wallet.
-
-        """
-        if path in self._path_mappings.keys():
-            raise DuplicateMappingError()
-        self._path_mappings[path] = wallet_id
-
-    def get_paths(self, wallet: str) -> []:
-        """
-        Return all connection handles exposed for the currently active wallet.
-
-        Returns:
-            handles: List of connection handles.
-
-        """
-
-        handles = [k for k, v in self._path_mappings.items() if v == wallet]
-
-        return handles
-
     async def get_wallet_for_msg(self, body: bytes) -> [str]:
         """
         Parses an inbound message for recipient keys and returns the wallets
@@ -509,23 +439,6 @@ class WalletHandler():
             wallet_ids.append(wallet_id)
 
         return wallet_ids
-
-    async def get_wallet_for_path(self, path: str) -> str:
-        """
-        Return the identifier of the wallet to which the given path belongs.
-
-        Args:
-            path: Inbound path for which the wallet shall be returned.
-
-        Raises:
-            KeyNotFoundError: if given key does not belong to handled_keys
-
-        """
-        wallet_id = self._path_mappings.get(path)
-        if wallet_id is None:
-            raise WalletNotFoundError()
-
-        return wallet_id
 
     async def add_connection(self, connection_id: str, wallet_id: str):
         """
