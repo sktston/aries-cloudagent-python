@@ -82,6 +82,8 @@ class WalletHandler():
         self._labels = {}
         # Maps: `wallet` -> `image_url`
         self._image_urls = {}
+        # Maps: `wallet` -> `webhook_url_list`
+        self._webhook_url_lists = {}
 
         self._provider = provider
 
@@ -150,6 +152,7 @@ class WalletHandler():
 
         self._labels[config["name"]] = config["label"]
         self._image_urls[config["name"]] = config["image_url"]
+        self._webhook_url_lists[config["name"]] = config["webhook_urls"]
 
     async def update_instance(self, config: dict, context: InjectionContext):
         """
@@ -161,6 +164,7 @@ class WalletHandler():
         """
         self._labels[config["name"]] = config["label"]
         self._image_urls[config["name"]] = config["image_url"]
+        self._webhook_url_lists[config["name"]] = config["webhook_urls"]
 
     async def set_instance(self, wallet_name: str, context: InjectionContext):
         """Set a specific wallet to open by the provider."""
@@ -237,6 +241,12 @@ class WalletHandler():
             self._image_urls.pop(wallet_name)
         except KeyError:
             raise WalletNotFoundError(f"image_url of wallet name {wallet_name} is not found")
+
+        try:
+            # Remove webhook_url_list in wallet provider.
+            self._webhook_url_lists.pop(wallet_name)
+        except KeyError:
+            raise WalletNotFoundError(f"webhook_urls of wallet name {wallet_name} is not found")
 
     async def get_wallet_list(self, context: InjectionContext, query: dict = None, ):
         """
@@ -368,6 +378,7 @@ class WalletHandler():
             context: InjectionContext,
             my_label: str = None,
             image_url: str = None,
+            webhook_urls: list = None,
             wallet_id: str = None,
             wallet_name: str = None,
     ):
@@ -378,6 +389,7 @@ class WalletHandler():
             context: Injection context.
             my_label: my label.
             image_url: my image url.
+            webhook_urls: my webhook urls.
             wallet_id: Identifier of the instance to be deleted.
             wallet_name: name of the instance to be deleted.
         """
@@ -400,6 +412,8 @@ class WalletHandler():
             config["label"] = my_label
         if image_url:
             config["image_url"] = image_url
+        if webhook_urls:
+            config["webhook_urls"] = webhook_urls
 
         # update record in admin storage (caller can be normal wallet, we change to admin context)
         admin_context = context.copy()
