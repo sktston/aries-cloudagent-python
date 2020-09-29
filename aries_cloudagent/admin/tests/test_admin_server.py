@@ -186,7 +186,7 @@ class TestAdminServer(AsyncTestCase):
         server = self.get_admin_server()
         test_url = "target_url"
         test_attempts = 99
-        record = server.add_webhook_target(
+        server.add_webhook_target(
             target_url=test_url,
             topic_filter=["*"],  # cover vacuous filter
             max_attempts=test_attempts,
@@ -210,7 +210,7 @@ class TestAdminServer(AsyncTestCase):
                 (test_topic, test_payload, test_url, test_attempts)
             ]
 
-        server.remove_webhook_target(webhook_id=record.id)
+        server.remove_webhook_target(target_url=test_url)
         assert test_url not in server.webhook_targets
 
     async def test_import_routes(self):

@@ -25,17 +25,8 @@ class BaseAdminServer(ABC):
         """Stop the webserver."""
 
     @abstractmethod
-    async def get_webhook_target_list(self, context: InjectionContext):
-        """Get a list of webhook targets."""
-
-    @abstractmethod
-    async def get_webhook_target(self, context: InjectionContext, webhook_id: str):
-        """Get a webhook target."""
-
-    @abstractmethod
-    async def add_webhook_target(
+    def add_webhook_target(
         self,
-        context: InjectionContext,
         target_url: str,
         topic_filter: Sequence[str] = None,
         max_attempts: int = None,
@@ -43,7 +34,7 @@ class BaseAdminServer(ABC):
         """Add a webhook target."""
 
     @abstractmethod
-    async def remove_webhook_target(self, context: InjectionContext, webhook_id: str):
+    def remove_webhook_target(self, target_url: str):
         """Remove a webhook target."""
 
     @abstractmethod
