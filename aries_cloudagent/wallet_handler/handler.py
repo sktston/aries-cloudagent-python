@@ -79,8 +79,8 @@ class WalletHandler():
         self._labels = {}
         # Maps: `wallet` -> `image_url`
         self._image_urls = {}
-        # Maps: `wallet` -> `webhook_url_list`
-        self._webhook_url_lists = {}
+        # Maps: `wallet` -> `webhook_urls`
+        self._webhook_urls_dict = {}
 
         self._provider = provider
 
@@ -131,7 +131,7 @@ class WalletHandler():
         # Get dids and check for paths in metadata.
         dids = await wallet.get_local_dids()
         for did in dids:
-            self.add_key(did.verkey, wallet.name)
+            await self.add_key(did.verkey, wallet.name)
 
         # Without changing the requested instance, the storage provider
         # picks up the correct wallet for fetching the connections.
@@ -144,9 +144,9 @@ class WalletHandler():
         for connection in connections:
             await self.add_connection(connection["connection_id"], config["name"])
 
-        self._labels[config["name"]] = config["label"]
-        self._image_urls[config["name"]] = config["image_url"]
-        self._webhook_url_lists[config["name"]] = config["webhook_urls"]
+        await self.add_label(config["name"], config["label"])
+        await self.add_image_url(config["name"], config["image_url"])
+        await self.add_webhook_urls(config["name"], config["webhook_urls"])
 
     async def update_instance(self, config: dict):
         """
@@ -155,9 +155,9 @@ class WalletHandler():
         Args:
             config: Settings for the updating instance.
         """
-        self._labels[config["name"]] = config["label"]
-        self._image_urls[config["name"]] = config["image_url"]
-        self._webhook_url_lists[config["name"]] = config["webhook_urls"]
+        await self.add_label(config["name"], config["label"])
+        await self.add_image_url(config["name"], config["image_url"])
+        await self.add_webhook_urls(config["name"], config["webhook_urls"])
 
     async def set_instance(self, wallet_name: str, context: InjectionContext):
         """Set a specific wallet to open by the provider."""
@@ -237,7 +237,7 @@ class WalletHandler():
 
         try:
             # Remove webhook_url_list in wallet provider.
-            self._webhook_url_lists.pop(wallet_name)
+            self._webhook_urls_dict.pop(wallet_name)
         except KeyError:
             raise WalletNotFoundError(f"webhook_urls of wallet name {wallet_name} is not found")
 
@@ -369,9 +369,7 @@ class WalletHandler():
     async def update_wallet(
             self,
             context: InjectionContext,
-            my_label: str = None,
-            image_url: str = None,
-            webhook_urls: list = None,
+            new_config: dict,
             wallet_id: str = None,
             wallet_name: str = None,
     ):
@@ -380,11 +378,9 @@ class WalletHandler():
 
         Args:
             context: Injection context.
-            my_label: my label.
-            image_url: my image url.
-            webhook_urls: my webhook urls.
-            wallet_id: Identifier of the instance to be deleted.
-            wallet_name: name of the instance to be deleted.
+            new_config: New settings for the instance.
+            wallet_id: Identifier of the instance to be updated.
+            wallet_name: name of the instance to be updated.
         """
         # get record
         if wallet_id:
@@ -401,12 +397,12 @@ class WalletHandler():
             raise WalletNotFoundError(f"wallet id or wallet id must be specified.")
 
         config = json.loads(record.value)
-        if my_label:
-            config["label"] = my_label
-        if image_url:
-            config["image_url"] = image_url
-        if webhook_urls:
-            config["webhook_urls"] = webhook_urls
+        if new_config["label"] is not None:
+            config["label"] = new_config["label"]
+        if new_config["image_url"] is not None:
+            config["image_url"] = new_config["image_url"]
+        if new_config["webhook_urls"] is not None:
+            config["webhook_urls"] = new_config["webhook_urls"]
 
         # update record in admin storage (caller can be normal wallet, we change to admin context)
         admin_context = context.copy()
@@ -462,10 +458,40 @@ class WalletHandler():
         Add a mapping between the given connection and wallet.
 
         Args:
-            connection_id: Indentifier of the new connection.
+            key: verification key of the new connection.
             wallet_id: Identifier of the wallet the connection belongs to.
         """
         self._handled_keys[key] = wallet_id
+
+    async def add_label(self, wallet: str, label: str):
+        """
+        Add a mapping between the given connection and wallet.
+
+        Args:
+            wallet: wallet name.
+            label: label of the wallet.
+        """
+        self._labels[wallet] = label
+
+    async def add_image_url(self, wallet: str, image_url: str):
+        """
+        Add a mapping between the given connection and wallet.
+
+        Args:
+            wallet: wallet name.
+            image_url: image_url of the wallet.
+        """
+        self._image_urls[wallet] = image_url
+
+    async def add_webhook_urls(self, wallet: str, webhook_urls: str):
+        """
+        Add a mapping between the given connection and wallet.
+
+        Args:
+            wallet: wallet name.
+            webhook_urls: webhook_urls of the wallet.
+        """
+        self._webhook_urls_dict[wallet] = webhook_urls
 
     async def get_wallet_for_connection(self, connection_id: str) -> str:
         """
@@ -545,7 +571,7 @@ class WalletHandler():
             KeyNotFoundError: if given wallet does not exist in _image_urls
 
         """
-        if wallet not in self._webhook_url_lists.keys():
+        if wallet not in self._webhook_urls_dict.keys():
             raise KeyNotFoundError()
 
-        return self._webhook_url_lists[wallet]
+        return self._webhook_urls_dict[wallet]

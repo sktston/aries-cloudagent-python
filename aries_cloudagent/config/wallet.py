@@ -98,22 +98,25 @@ async def wallet_config(context: InjectionContext, provision: bool = False):
         try:
             await wallet_handler.add_wallet(context, config)
         except WalletDuplicateError:
-            pass
+            await wallet_handler.update_wallet(
+                context=context,
+                new_config=config,
+                wallet_name=wallet.name)
 
         # load information of admin wallet to wallet_handler
         # Get dids and check for paths in metadata.
         dids = await wallet.get_local_dids()
         for did in dids:
-            wallet_handler.add_key(did.verkey, wallet.name)
+            await wallet_handler.add_key(did.verkey, wallet.name)
 
         # Add connections of opened wallet to handler.
         records = await ConnectionRecord.query(context)
         connections = [record.serialize() for record in records]
         for connection in connections:
-            await wallet_handler.add_connection(connection["connection_id"], config["name"])
+            await wallet_handler.add_connection(connection["connection_id"], wallet.name)
 
-        wallet_handler._labels[config["name"]] = config["label"]
-        wallet_handler._image_urls[config["name"]] = config["image_url"]
-        wallet_handler._webhook_url_lists[config["name"]] = config["webhook_urls"]
+        await wallet_handler.add_label(config["name"], config["label"])
+        await wallet_handler.add_image_url(config["name"], config["image_url"])
+        await wallet_handler.add_webhook_urls(config["name"], config["webhook_urls"])
 
     return public_did

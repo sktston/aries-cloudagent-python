@@ -272,10 +272,9 @@ async def wallet_handler_update_my_wallet(request: web.BaseRequest):
     """
     context = request["context"]
     body = await request.json()
-    my_label = body.get("label")
-    image_url = body.get("image_url")
-    webhook_urls = body.get("webhook_urls")
-    if not my_label and not image_url and not webhook_urls:
+    config = {"label": body.get("label"), "image_url": body.get("image_url"),
+              "webhook_urls": body.get("webhook_urls")}
+    if config["label"] is None and config["image_url"] is None and config["webhook_urls"] is None:
         raise web.HTTPBadRequest(reason="At least one parameter is required.")
 
     wallet: BaseWallet = await context.inject(BaseWallet)
@@ -284,9 +283,7 @@ async def wallet_handler_update_my_wallet(request: web.BaseRequest):
     try:
         record = await wallet_handler.update_wallet(
             context=context,
-            my_label=my_label,
-            image_url=image_url,
-            webhook_urls=webhook_urls,
+            new_config=config,
             wallet_name=wallet.name)
     except WalletNotFoundError as err:
         raise web.HTTPNotFound(reason=err.roll_up) from err
