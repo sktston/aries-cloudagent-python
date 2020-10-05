@@ -144,9 +144,7 @@ class WalletHandler():
         for connection in connections:
             await self.add_connection(connection["connection_id"], config["name"])
 
-        await self.add_label(config["name"], config["label"])
-        await self.add_image_url(config["name"], config["image_url"])
-        await self.add_webhook_urls(config["name"], config["webhook_urls"])
+        await self.update_instance(config)
 
     async def update_instance(self, config: dict):
         """
@@ -155,9 +153,24 @@ class WalletHandler():
         Args:
             config: Settings for the updating instance.
         """
-        await self.add_label(config["name"], config["label"])
-        await self.add_image_url(config["name"], config["image_url"])
-        await self.add_webhook_urls(config["name"], config["webhook_urls"])
+
+        wallet_name = config["name"]
+        try:
+            label = config["label"]
+        except KeyError:
+            label = None
+        try:
+            image_url = config["image_url"]
+        except KeyError:
+            image_url = None
+        try:
+            webhook_urls = config["webhook_urls"]
+        except KeyError:
+            webhook_urls = []
+
+        await self.add_label(wallet_name, label)
+        await self.add_image_url(wallet_name, image_url)
+        await self.add_webhook_urls(wallet_name, webhook_urls)
 
     async def set_instance(self, wallet_name: str, context: InjectionContext):
         """Set a specific wallet to open by the provider."""

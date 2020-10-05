@@ -89,7 +89,7 @@ async def wallet_config(context: InjectionContext, provision: bool = False):
         config["key"] = wallet._key
         config["type"] = wallet.type
         config["label"] = context.settings.get("default_label")
-        config["image_url"] = ""
+        config["image_url"] = None
         config["webhook_urls"] = context.settings.get("admin.webhook_urls")
 
         wallet_handler: WalletHandler = await context.inject(WalletHandler)
@@ -115,8 +115,6 @@ async def wallet_config(context: InjectionContext, provision: bool = False):
         for connection in connections:
             await wallet_handler.add_connection(connection["connection_id"], wallet.name)
 
-        await wallet_handler.add_label(config["name"], config["label"])
-        await wallet_handler.add_image_url(config["name"], config["image_url"])
-        await wallet_handler.add_webhook_urls(config["name"], config["webhook_urls"])
+        await wallet_handler.update_instance(config)
 
     return public_did
