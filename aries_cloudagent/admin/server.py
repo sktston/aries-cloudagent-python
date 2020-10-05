@@ -695,11 +695,17 @@ class AdminServer(BaseAdminServer):
     async def send_webhook(self, context: InjectionContext, topic: str, payload: dict):
         """Add a webhook to the queue, to send to all registered targets."""
         if self.webhook_router:
-            for idx, target in self.webhook_targets.items():
-                if not target.topic_filter or topic in target.topic_filter:
-                    self.webhook_router(
-                        topic, payload, target.endpoint, target.max_attempts
-                    )
+            ext_plugins = self.context.settings.get_value("external_plugins")
+            if ext_plugins and 'aries_cloudagent.wallet_handler' in ext_plugins:
+                wallet_handler: WalletHandler = await context.inject(WalletHandler)
+                webhook_urls = await wallet_handler.get_webhook_urls_for_wallet(context.settings.get("wallet.id"))
+                for webhook_url in webhook_urls:
+                    # FIXME: Do we need topic filter and max attempts configurable ?
+                    self.webhook_router(topic, payload, webhook_url)
+            else:
+                for idx, target in self.webhook_targets.items():
+                    if not target.topic_filter or topic in target.topic_filter:
+                        self.webhook_router(topic, payload, target.endpoint, target.max_attempts)
 
         for queue in self.websocket_queues.values():
             if queue.authenticated or topic in ("ping", "settings"):

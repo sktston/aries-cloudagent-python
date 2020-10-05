@@ -540,3 +540,19 @@ class WalletHandler():
             raise KeyNotFoundError()
 
         return self._image_urls[wallet]
+
+    async def get_webhook_urls_for_wallet(self, wallet: str) -> list:
+        """
+        Return the list of webhook url of the wallet to which the given wallet name.
+
+        Args:
+            wallet: wallet name for which the list of webhook url shall be returned.
+
+        Raises:
+            KeyNotFoundError: if given wallet does not exist in _image_urls
+
+        """
+        if wallet not in self._webhook_url_lists.keys():
+            raise KeyNotFoundError()
+
+        return self._webhook_url_lists[wallet]
