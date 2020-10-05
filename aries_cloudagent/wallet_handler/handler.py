@@ -153,24 +153,9 @@ class WalletHandler():
         Args:
             config: Settings for the updating instance.
         """
-
-        wallet_name = config["name"]
-        try:
-            label = config["label"]
-        except KeyError:
-            label = None
-        try:
-            image_url = config["image_url"]
-        except KeyError:
-            image_url = None
-        try:
-            webhook_urls = config["webhook_urls"]
-        except KeyError:
-            webhook_urls = []
-
-        await self.add_label(wallet_name, label)
-        await self.add_image_url(wallet_name, image_url)
-        await self.add_webhook_urls(wallet_name, webhook_urls)
+        await self.add_label(config["name"], config.get("label"))
+        await self.add_image_url(config["name"], config.get("image_url"))
+        await self.add_webhook_urls(config["name"], config.get("webhook_urls", []))
 
     async def set_instance(self, wallet_name: str, context: InjectionContext):
         """Set a specific wallet to open by the provider."""
