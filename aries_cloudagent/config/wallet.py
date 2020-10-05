@@ -89,7 +89,7 @@ async def wallet_config(context: InjectionContext, provision: bool = False):
         config["key"] = wallet._key
         config["type"] = wallet.type
         config["label"] = context.settings.get("default_label")
-        config["image_url"] = None
+        config["image_url"] = ""
         config["webhook_urls"] = context.settings.get("admin.webhook_urls")
 
         wallet_handler: WalletHandler = await context.inject(WalletHandler)
