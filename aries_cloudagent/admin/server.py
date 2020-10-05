@@ -26,7 +26,7 @@ from ..utils.stats import Collector
 from ..utils.task_queue import TaskQueue
 from ..version import __version__
 from ..wallet_handler import WalletHandler
-from ..wallet_handler.error import WalletNotFoundError
+from ..wallet_handler.error import WalletNotFoundError, KeyNotFoundError
 
 from .base_server import BaseAdminServer
 from .error import AdminSetupError
@@ -698,10 +698,14 @@ class AdminServer(BaseAdminServer):
             ext_plugins = self.context.settings.get_value("external_plugins")
             if ext_plugins and 'aries_cloudagent.wallet_handler' in ext_plugins:
                 wallet_handler: WalletHandler = await context.inject(WalletHandler)
-                webhook_urls = await wallet_handler.get_webhook_urls_for_wallet(context.settings.get("wallet.id"))
-                for webhook_url in webhook_urls:
-                    # FIXME: Do we need topic filter and max attempts configurable ?
-                    self.webhook_router(topic, payload, webhook_url)
+                try:
+                    wallet_name = context.settings.get("wallet.id")
+                    webhook_urls = await wallet_handler.get_webhook_urls_for_wallet(wallet_name)
+                    for webhook_url in webhook_urls:
+                        # FIXME: Do we need topic filter and max attempts configurable ?
+                        self.webhook_router(topic, payload, webhook_url)
+                except KeyNotFoundError:
+                    LOGGER.exception("webhook urls is not found with given context")
             else:
                 for idx, target in self.webhook_targets.items():
                     if not target.topic_filter or topic in target.topic_filter:

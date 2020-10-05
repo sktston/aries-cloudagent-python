@@ -1,22 +1,17 @@
 """Multi wallet handler implementation of BaseWallet interface."""
 
 import json
-import re
-import time
 import uuid
 
 import indy.anoncreds
 import indy.did
 import indy.crypto
-import hashlib
 import logging
 from indy.error import IndyError, ErrorCode
-from base64 import b64encode, b64decode
+from base64 import b64decode
 
-from ..config.wallet import WALLET_CONFIG_RECORD_TYPE
 from ..storage.error import StorageNotFoundError
 from ..storage.record import StorageRecord
-from ..wallet.base import BaseWallet
 from ..storage.base import BaseStorage
 from ..ledger.base import BaseLedger
 from ..wallet.error import WalletError, WalletDuplicateError
@@ -31,9 +26,11 @@ from ..cache.base import BaseCache
 
 from .error import KeyNotFoundError, WalletAccessError
 from .error import WalletNotFoundError
-from .error import DuplicateMappingError
 
 LOGGER = logging.getLogger(__name__)
+
+WALLET_CONFIG_RECORD_TYPE = "wallet_config"
+
 
 class WalletHandler():
     """Class to handle multiple wallets."""
@@ -134,18 +131,15 @@ class WalletHandler():
         # Get dids and check for paths in metadata.
         dids = await wallet.get_local_dids()
         for did in dids:
-            self._handled_keys[did.verkey] = wallet.name
+            self.add_key(did.verkey, wallet.name)
 
         # Without changing the requested instance, the storage provider
         # picks up the correct wallet for fetching the connections.
-        adding_context = context.copy()
-        adding_context.settings.set_value("wallet.id", wallet.name)
+        user_context = context.copy()
+        user_context.settings.set_value("wallet.id", wallet.name)
 
         # Add connections of opened wallet to handler.
-        tag_filter = {}
-        post_filter = {}
-        # wallet_handler.set_instance(config["name"])
-        records = await ConnectionRecord.query(adding_context, tag_filter, post_filter)
+        records = await ConnectionRecord.query(user_context)
         connections = [record.serialize() for record in records]
         for connection in connections:
             await self.add_connection(connection["connection_id"], config["name"])
@@ -154,13 +148,12 @@ class WalletHandler():
         self._image_urls[config["name"]] = config["image_url"]
         self._webhook_url_lists[config["name"]] = config["webhook_urls"]
 
-    async def update_instance(self, config: dict, context: InjectionContext):
+    async def update_instance(self, config: dict):
         """
         Add a new instance to the handler to be used during runtime.
 
         Args:
             config: Settings for the updating instance.
-            context: Injection context.
         """
         self._labels[config["name"]] = config["label"]
         self._image_urls[config["name"]] = config["image_url"]
@@ -423,7 +416,7 @@ class WalletHandler():
         record = await self.get_wallet(context, record.id)
 
         # update instance
-        await self.update_instance(config, context)
+        await self.update_instance(config)
 
         return record
 

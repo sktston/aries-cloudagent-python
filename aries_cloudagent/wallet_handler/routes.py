@@ -15,25 +15,6 @@ from ..storage.record import StorageRecord
 from ..wallet.base import BaseWallet
 from ..wallet.error import WalletError, WalletDuplicateError
 
-# from ..storage.base import BaseStorage
-# from ..storage.record import StorageRecord
-from ..storage.error import StorageNotFoundError
-
-from ..protocols.connections.v1_0.manager import ConnectionManager
-from ..protocols.connections.v1_0.routes import (
-    InvitationResultSchema,
-)
-
-from ..connections.models.connection_record import (
-    ConnectionRecord,
-    ConnectionRecordSchema,
-)
-
-from ..protocols.connections.v1_0.messages.connection_invitation import (
-    ConnectionInvitation,
-    ConnectionInvitationSchema,
-)
-
 from marshmallow import fields, Schema
 
 WALLET_TYPES = {

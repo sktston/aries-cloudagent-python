@@ -1,19 +1,16 @@
 """Wallet configuration."""
-import json
 import logging
-import uuid
 
-from ..storage.base import BaseStorage
-from ..storage.error import StorageNotFoundError
-from ..storage.record import StorageRecord
+from ..connections.models.connection_record import ConnectionRecord
 from ..wallet.base import BaseWallet
 from ..wallet.crypto import seed_to_did
 
 from .base import ConfigError
 from .injection_context import InjectionContext
+from ..wallet.error import WalletDuplicateError
+from ..wallet_handler import WalletHandler
 
 LOGGER = logging.getLogger(__name__)
-WALLET_CONFIG_RECORD_TYPE = "wallet_config"
 
 
 async def wallet_config(context: InjectionContext, provision: bool = False):
@@ -87,29 +84,36 @@ async def wallet_config(context: InjectionContext, provision: bool = False):
     # add wallet config in admin storage if not exist
     ext_plugins = context.settings.get_value("external_plugins")
     if ext_plugins and 'aries_cloudagent.wallet_handler' in ext_plugins:
-        storage: BaseStorage = await context.inject(BaseStorage)
+        config = {}
+        config["name"] = wallet.name
+        config["key"] = wallet._key
+        config["type"] = wallet.type
+        config["label"] = context.settings.get("default_label")
+        config["image_url"] = None
+        config["webhook_urls"] = context.settings.get("admin.webhook_urls")
+
+        wallet_handler: WalletHandler = await context.inject(WalletHandler)
+
+        # store config to storage if not exist
         try:
-            result = await storage.search_records(
-                type_filter=WALLET_CONFIG_RECORD_TYPE,
-                tag_query={"name": wallet.name},
-            ).fetch_single()
-            if result:
-                pass
-        except StorageNotFoundError:
-            config = {}
-            config["name"] = wallet.name
-            config["key"] = wallet._key
-            config["type"] = wallet.type
-            config["label"] = wallet.name
-            config["storage_type"] = wallet._storage_type
-            config["storage_config"] = wallet._storage_config
-            config["storage_creds"] = wallet._storage_creds
-            record = StorageRecord(
-                type=WALLET_CONFIG_RECORD_TYPE,
-                value=json.dumps(config),
-                tags={"name": config["name"]},
-                id=str(uuid.uuid4()),
-            )
-            await storage.add_record(record)
+            await wallet_handler.add_wallet(context, config)
+        except WalletDuplicateError:
+            pass
+
+        # load information of admin wallet to wallet_handler
+        # Get dids and check for paths in metadata.
+        dids = await wallet.get_local_dids()
+        for did in dids:
+            wallet_handler.add_key(did.verkey, wallet.name)
+
+        # Add connections of opened wallet to handler.
+        records = await ConnectionRecord.query(context)
+        connections = [record.serialize() for record in records]
+        for connection in connections:
+            await wallet_handler.add_connection(connection["connection_id"], config["name"])
+
+        wallet_handler._labels[config["name"]] = config["label"]
+        wallet_handler._image_urls[config["name"]] = config["image_url"]
+        wallet_handler._webhook_url_lists[config["name"]] = config["webhook_urls"]
 
     return public_did
