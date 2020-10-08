@@ -6,6 +6,7 @@ from typing import Callable, Coroutine, Sequence, Set
 import uuid
 
 from aiohttp import web
+from elasticapm.contrib.aiohttp import ElasticAPM
 from aiohttp_apispec import (
     docs,
     response_schema,
@@ -408,6 +409,8 @@ class AdminServer(BaseAdminServer):
 
         """
         self.app = await self.make_application()
+        apm = ElasticAPM(self.app)
+
         runner = web.AppRunner(self.app)
         await runner.setup()
 

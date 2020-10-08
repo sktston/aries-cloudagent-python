@@ -4,6 +4,8 @@ import logging
 
 from aiohttp import web
 
+from elasticapm.contrib.aiohttp import ElasticAPM
+
 from ...messaging.error import MessageParseError
 
 from .base import BaseInboundTransport, InboundTransportSetupError
@@ -52,6 +54,8 @@ class CustodialHttpTransport(BaseInboundTransport):
 
         """
         app = await self.make_application()
+        apm = ElasticAPM(app)
+
         runner = web.AppRunner(app)
         await runner.setup()
         self.site = web.TCPSite(runner, host=self.host, port=self.port)
