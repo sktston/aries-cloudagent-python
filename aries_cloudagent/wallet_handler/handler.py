@@ -186,20 +186,6 @@ class WalletHandler():
         except KeyError:
             raise WalletNotFoundError(f"Wallet not found: {wallet_name}")
 
-        try:
-            # Remove storage in dynamic provider
-            storage_provider = context.injector._providers[BaseStorage]
-            storage_provider._instances.pop(wallet_name)
-        except KeyError:
-            raise WalletNotFoundError(f"storage_provider of wallet name {wallet_name} is not found")
-
-        try:
-            # Remove ledger in dynamic provider
-            ledger_provider = context.injector._providers[BaseLedger]
-            ledger_provider._instances.pop(wallet_name)
-        except KeyError:
-            raise WalletNotFoundError(f"ledger_provider of wallet name {wallet_name} is not found")
-
         if wallet.WALLET_TYPE == 'indy':
             # Delete wallet from storage.
             try:
@@ -213,31 +199,20 @@ class WalletHandler():
                     raise WalletNotFoundError(f"Wallet not found: {wallet_name}")
                 raise WalletError(str(x_indy))
 
+        # Remove storage in dynamic provider
+        storage_provider = context.injector._providers[BaseStorage]
+        if wallet_name in storage_provider._instances: del storage_provider._instances[wallet_name]
+
+        # Remove ledger in dynamic provider
+        ledger_provider = context.injector._providers[BaseLedger]
+        if wallet_name in ledger_provider._instances: del ledger_provider._instances[wallet_name]
+
         # Remove all mappings of wallet.
-        self._handled_keys = {
-            key: val for key, val in self._handled_keys.items() if val != wallet_name
-            }
-        self._connections = {
-            key: val for key, val in self._connections.items() if val != wallet_name
-            }
-
-        try:
-            # Remove label in wallet provider.
-            self._labels.pop(wallet_name)
-        except KeyError:
-            raise WalletNotFoundError(f"label of wallet name {wallet_name} is not found")
-
-        try:
-            # Remove label in wallet provider.
-            self._image_urls.pop(wallet_name)
-        except KeyError:
-            raise WalletNotFoundError(f"image_url of wallet name {wallet_name} is not found")
-
-        try:
-            # Remove webhook_url_list in wallet provider.
-            self._webhook_urls_dict.pop(wallet_name)
-        except KeyError:
-            raise WalletNotFoundError(f"webhook_urls of wallet name {wallet_name} is not found")
+        await self.remove_keys_for_wallet(wallet_name)
+        await self.remove_connections_for_wallet(wallet_name)
+        await self.remove_label_for_wallet(wallet_name)
+        await self.remove_image_url_for_wallet(wallet_name)
+        await self.remove_webhook_urls_for_wallet(wallet_name)
 
     async def get_wallet_list(self, context: InjectionContext, query: dict = None, ):
         """
@@ -414,32 +389,15 @@ class WalletHandler():
 
         return record
 
-    async def get_wallet_for_msg(self, body: bytes) -> [str]:
+    async def add_key(self, key: str, wallet_id: str):
         """
-        Parses an inbound message for recipient keys and returns the wallets
-        associated to keys.
+        Add a mapping between the given connection and wallet.
 
         Args:
-            body: Inbound raw message
-
-        Raises:
-            KeyNotFoundError: if given key does not belong to handled_keys
+            key: verification key of the new connection.
+            wallet_id: Identifier of the wallet the connection belongs to.
         """
-        msg = json.loads(body)
-        protected = json.loads(b64decode(msg['protected']))
-        recipients = protected['recipients']
-        wallet_ids = []
-        # Check each recipient public key (in `kid`) if agent handles a wallet
-        # associated to that key.
-        for recipient in recipients:
-            kid = recipient['header']['kid']
-            try:
-                wallet_id = await self.get_wallet_for_key(kid)
-            except KeyNotFoundError:
-                wallet_id = None
-            wallet_ids.append(wallet_id)
-
-        return wallet_ids
+        self._handled_keys[key] = wallet_id
 
     async def add_connection(self, connection_id: str, wallet_id: str):
         """
@@ -450,16 +408,6 @@ class WalletHandler():
             wallet_id: Identifier of the wallet the connection belongs to.
         """
         self._connections[connection_id] = wallet_id
-
-    async def add_key(self, key: str, wallet_id: str):
-        """
-        Add a mapping between the given connection and wallet.
-
-        Args:
-            key: verification key of the new connection.
-            wallet_id: Identifier of the wallet the connection belongs to.
-        """
-        self._handled_keys[key] = wallet_id
 
     async def add_label(self, wallet: str, label: str):
         """
@@ -491,6 +439,49 @@ class WalletHandler():
         """
         self._webhook_urls_dict[wallet] = webhook_urls
 
+    async def get_wallet_for_msg(self, body: bytes) -> [str]:
+        """
+        Parses an inbound message for recipient keys and returns the wallets
+        associated to keys.
+
+        Args:
+            body: Inbound raw message
+
+        Raises:
+            KeyNotFoundError: if given key does not belong to handled_keys
+        """
+        msg = json.loads(body)
+        protected = json.loads(b64decode(msg['protected']))
+        recipients = protected['recipients']
+        wallet_ids = []
+        # Check each recipient public key (in `kid`) if agent handles a wallet
+        # associated to that key.
+        for recipient in recipients:
+            kid = recipient['header']['kid']
+            try:
+                wallet_id = await self.get_wallet_for_key(kid)
+            except KeyNotFoundError:
+                wallet_id = None
+            wallet_ids.append(wallet_id)
+
+        return wallet_ids
+
+    async def get_wallet_for_key(self, key: str) -> str:
+        """
+        Return the identifier of the wallet to which the given key belongs.
+
+        Args:
+            key: Verkey for which the wallet shall be returned.
+
+        Raises:
+            KeyNotFoundError: if given key does not belong to handled_keys
+
+        """
+        if key not in self._handled_keys.keys():
+            raise KeyNotFoundError()
+
+        return self._handled_keys[key]
+
     async def get_wallet_for_connection(self, connection_id: str) -> str:
         """
         Return the identifier of the wallet to which the given key belongs.
@@ -509,22 +500,6 @@ class WalletHandler():
             raise KeyNotFoundError()
 
         return self._connections[connection_id]
-
-    async def get_wallet_for_key(self, key: str) -> str:
-        """
-        Return the identifier of the wallet to which the given key belongs.
-
-        Args:
-            key: Verkey for which the wallet shall be returned.
-
-        Raises:
-            KeyNotFoundError: if given key does not belong to handled_keys
-
-        """
-        if key not in self._handled_keys.keys():
-            raise KeyNotFoundError()
-
-        return self._handled_keys[key]
 
     async def get_label_for_wallet(self, wallet: str) -> str:
         """
@@ -573,3 +548,57 @@ class WalletHandler():
             raise KeyNotFoundError()
 
         return self._webhook_urls_dict[wallet]
+
+    async def remove_keys_for_wallet(self, wallet: str):
+        """
+        Remove the keys of the wallet.
+
+        Args:
+            wallet: wallet name.
+
+        """
+        self._handled_keys = {
+            key: val for key, val in self._handled_keys.items() if val != wallet
+        }
+
+    async def remove_connections_for_wallet(self, wallet: str):
+        """
+        Remove the connections of the wallet.
+
+        Args:
+            wallet: wallet name.
+
+        """
+        self._connections = {
+            key: val for key, val in self._connections.items() if val != wallet
+        }
+
+    async def remove_label_for_wallet(self, wallet: str):
+        """
+        Remove the label of the wallet.
+
+        Args:
+            wallet: wallet name.
+
+        """
+        if wallet in self._labels: del self._labels[wallet]
+
+    async def remove_image_url_for_wallet(self, wallet: str):
+        """
+        Remove the image_url of the wallet.
+
+        Args:
+            wallet: wallet name.
+
+        """
+        if wallet in self._image_urls: del self._image_urls[wallet]
+
+    async def remove_webhook_urls_for_wallet(self, wallet: str):
+        """
+        Remove the webhook_urls of the wallet.
+
+        Args:
+            wallet: wallet name.
+
+        """
+        if wallet in self._webhook_urls_dict: del self._webhook_urls_dict[wallet]
