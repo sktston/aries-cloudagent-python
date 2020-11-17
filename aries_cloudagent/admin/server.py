@@ -2,6 +2,7 @@
 
 import asyncio
 import logging
+import os
 from typing import Callable, Coroutine, Sequence, Set
 import uuid
 
@@ -13,6 +14,7 @@ from aiohttp_apispec import (
     validation_middleware,
 )
 import aiohttp_cors
+from elasticapm.contrib.aiohttp import ElasticAPM
 
 from marshmallow import fields, Schema
 
@@ -33,6 +35,7 @@ from .error import AdminSetupError
 
 
 LOGGER = logging.getLogger(__name__)
+ELASTIC_APM_ENABLED = os.getenv("ELASTIC_APM_ENABLED")
 
 
 class AdminModulesSchema(Schema):
@@ -365,9 +368,32 @@ class AdminServer(BaseAdminServer):
         agent_label = self.context.settings.get("default_label")
         version_string = f"v{__version__}"
 
-        setup_aiohttp_apispec(
-            app=app, title=agent_label, version=version_string, swagger_path="/api/doc"
+        # if it is the agent in k8s behind the nginx ingress
+        if agent_label == "ACA-Py Agent (Multi-Tenant)":
+            setup_aiohttp_apispec(
+                app=app,
+                title=agent_label,
+                version=version_string,
+                swagger_path="/agent/swagger-ui",
+                static_path="/agent/swagger-ui/static/swagger",
+                url="/agent/swagger-ui/swagger.json",
+                basePath="/agent/api",
+                securityDefinitions={
+                    "OAuth2": {"type": "apiKey", "name": "Authorization", "in": "header"}
+                },
+                security=[{"OAuth2": []}]
         )
+        else:
+            setup_aiohttp_apispec(
+                app=app,
+                title=agent_label,
+                version=version_string,
+                swagger_path="/api/doc",
+                securityDefinitions={
+                    "WalletAuth": {"type": "apiKey", "name": "Wallet", "in": "header"}
+                },
+                security=[{"WalletAuth": []}]
+            )
         app.on_startup.append(self.on_startup)
 
         # ensure we always have status values
@@ -393,6 +419,9 @@ class AdminServer(BaseAdminServer):
             return dict(sorted([item for item in raw.items()], key=lambda x: x[0]))
 
         self.app = await self.make_application()
+        # ElasticAPM is enabled only under initial platform
+        if ELASTIC_APM_ENABLED and ELASTIC_APM_ENABLED == "true":
+            apm = ElasticAPM(self.app)
         runner = web.AppRunner(self.app)
         await runner.setup()
 
