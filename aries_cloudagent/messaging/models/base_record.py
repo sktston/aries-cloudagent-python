@@ -166,6 +166,9 @@ class BaseRecord(BaseModel):
             value: The value to cache
             ttl: The cache ttl
         """
+        # FIXME: Disable cache support until shared cache is possible in multiple aca-py servers environments
+        return
+
         if not cache_key:
             return
         cache: BaseCache = await context.inject(BaseCache, required=False)
