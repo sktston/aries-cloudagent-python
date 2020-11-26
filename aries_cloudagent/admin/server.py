@@ -35,7 +35,7 @@ from .error import AdminSetupError
 
 
 LOGGER = logging.getLogger(__name__)
-ELASTIC_APM_ENABLED = os.getenv("ELASTIC_APM_ENABLED")
+# ELASTIC_APM_ENABLED = os.getenv("ELASTIC_APM_ENABLED")
 
 
 class AdminModulesSchema(Schema):

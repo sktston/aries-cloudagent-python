@@ -14,7 +14,7 @@ from .base import BaseInboundTransport, InboundTransportSetupError
 from ...wallet_handler.handler import WalletHandler
 
 LOGGER = logging.getLogger(__name__)
-ELASTIC_APM_ENABLED = os.getenv("ELASTIC_APM_ENABLED")
+# ELASTIC_APM_ENABLED = os.getenv("ELASTIC_APM_ENABLED")
 
 
 class CustodialHttpTransport(BaseInboundTransport):
