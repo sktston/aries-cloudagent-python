@@ -420,8 +420,8 @@ class AdminServer(BaseAdminServer):
 
         self.app = await self.make_application()
         # ElasticAPM is enabled only under initial platform
-        if ELASTIC_APM_ENABLED and ELASTIC_APM_ENABLED == "true":
-            apm = ElasticAPM(self.app)
+        # if ELASTIC_APM_ENABLED and ELASTIC_APM_ENABLED == "true":
+        #     apm = ElasticAPM(self.app)
         runner = web.AppRunner(self.app)
         await runner.setup()
 
