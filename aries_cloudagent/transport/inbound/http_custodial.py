@@ -14,7 +14,7 @@ from .base import BaseInboundTransport, InboundTransportSetupError
 from ...wallet_handler.handler import WalletHandler
 
 LOGGER = logging.getLogger(__name__)
-# ELASTIC_APM_ENABLED = os.getenv("ELASTIC_APM_ENABLED")
+ELASTIC_APM_ENABLED = os.getenv("ELASTIC_APM_ENABLED")
 
 
 class CustodialHttpTransport(BaseInboundTransport):
@@ -56,8 +56,8 @@ class CustodialHttpTransport(BaseInboundTransport):
         """
         app = await self.make_application()
         # ElasticAPM is enabled only under initial platform
-        # if ELASTIC_APM_ENABLED and ELASTIC_APM_ENABLED == "true":
-        #     apm = ElasticAPM(app)
+        if ELASTIC_APM_ENABLED and ELASTIC_APM_ENABLED == "true":
+            apm = ElasticAPM(app)
         runner = web.AppRunner(app)
         await runner.setup()
         self.site = web.TCPSite(runner, host=self.host, port=self.port)
