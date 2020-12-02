@@ -2,6 +2,7 @@
 
 import logging
 import os
+import sys
 
 from aiohttp import web
 
@@ -109,6 +110,14 @@ class CustodialHttpTransport(BaseInboundTransport):
             wallet_ids = await wallet_handler.get_wallet_by_msg(body)
             session.context = session.context.copy()
             # FIXME: What if multiple recipients are handled by the agent?
+            if len(wallet_ids) != 1:
+                for wallet_id in wallet_ids:
+                    LOGGER.info("wallet_id:" + wallet_id)
+                LOGGER.error("len(wallet_ids) != 1")
+                sys.exit(1)
+            if wallet_ids[0] == "base.agent":
+                LOGGER.error("wallet_ids[0] is base.agent")
+                sys.exit(1)
             session.context.settings.set_value("wallet.id", wallet_ids[0])
 
         async with session:
