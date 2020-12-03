@@ -119,6 +119,7 @@ class CustodialHttpTransport(BaseInboundTransport):
                 LOGGER.error("wallet_ids[0] is base.agent")
                 sys.exit(1)
             session.context.settings.set_value("wallet.id", wallet_ids[0])
+            LOGGER.info("inbound_message_handler wallet.id: " + wallet_ids[0])
 
         async with session:
 

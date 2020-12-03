@@ -107,6 +107,7 @@ class PackWireFormat(BaseWireFormat):
         message_body: Union[str, bytes],
         receipt: MessageReceipt,
     ):
+        LOGGER.info("unpack context.settings.wallet.id: " + context.settings.get("wallet.id"))
         """Look up the wallet instance and perform the message unpack."""
         try:
             wallet: BaseWallet = await context.inject(BaseWallet)
