@@ -94,7 +94,6 @@ class CustodialHttpTransport(BaseInboundTransport):
 
         client_info = {"host": request.host, "remote": request.remote}
 
-
         session = await self.create_session(
             accept_undelivered=True,
             can_respond=True,
@@ -109,7 +108,10 @@ class CustodialHttpTransport(BaseInboundTransport):
             wallet_ids = await wallet_handler.get_wallet_by_msg(body)
             session.context = session.context.copy()
             # FIXME: What if multiple recipients are handled by the agent?
-            session.context.settings.set_value("wallet.id", wallet_ids[0])
+            wallet_name =  wallet_ids[0]
+            session.context.settings.set_value("wallet.id", wallet_name)
+            # prevent getting wallet without opening wallet
+            await wallet_handler.set_instance(wallet_name, session.context)
 
         async with session:
 
