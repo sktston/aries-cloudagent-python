@@ -148,12 +148,16 @@ async def ready_middleware(request: web.BaseRequest, handler: Coroutine):
     ):
         try:
             return await handler(request)
-        except (LedgerConfigError, LedgerTransactionError) as e:
+        except LedgerConfigError as e:
             # fatal, signal server shutdown
             LOGGER.error("Shutdown with %s", str(e))
             request.app._state["ready"] = False
             request.app._state["alive"] = False
             raise
+        except LedgerTransactionError as e:
+            # wrong transaction
+            LOGGER.warning("Handler got LedgerTransactionError %s", str(e))
+            pass
         except web.HTTPFound as e:
             # redirect, typically / -> /api/doc
             LOGGER.info("Handler redirect to: %s", e.location)
