@@ -36,8 +36,8 @@ jobs:
     - name: Build, tag, and push image to NCP Container registry
       id: build-and-push-to-ncr
       run: |
-        docker build -f $DOCKERFILE_PATH -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG .
-        docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
+        docker build -f $DOCKERFILE_PATH -t $NCR_REGISTRY/$NCR_REPOSITORY:$IMAGE_TAG .
+        docker push $NCR_REGISTRY/$NCR_REPOSITORY:$IMAGE_TAG
         
     - name: Slack messsae - end
       uses: act10ns/slack@v1
