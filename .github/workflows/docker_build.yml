@@ -34,8 +34,7 @@ jobs:
         password: ${{ secrets.NCP_SECRET_KEY }}
     
     - name: Build, tag, and push image to NCP Container registry
-      id: build-and-push-to-ecr
-      working-directory: main
+      id: build-and-push-to-ncr
       run: |
         docker build -f $DOCKERFILE_PATH -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG .
         docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
