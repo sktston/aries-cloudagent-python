@@ -2,6 +2,7 @@
 
 import asyncio
 import logging
+import os
 from typing import Callable, Coroutine, Sequence, Set
 import uuid
 
@@ -14,6 +15,8 @@ from aiohttp_apispec import (
 )
 import aiohttp_cors
 import jwt
+
+from elasticapm.contrib.aiohttp import ElasticAPM
 
 from marshmallow import fields
 
@@ -37,6 +40,7 @@ from .request_context import AdminRequestContext
 
 
 LOGGER = logging.getLogger(__name__)
+ELASTIC_APM_ENABLED = os.getenv("ELASTIC_APM_ENABLED")
 
 
 class AdminModulesSchema(OpenAPISchema):
@@ -420,6 +424,11 @@ class AdminServer(BaseAdminServer):
             return dict(sorted([item for item in raw.items()], key=lambda x: x[0]))
 
         self.app = await self.make_application()
+
+        # ElasticAPM is enabled only under initial platform
+        if ELASTIC_APM_ENABLED and ELASTIC_APM_ENABLED == "true":
+            apm = ElasticAPM(self.app)
+            
         runner = web.AppRunner(self.app)
         await runner.setup()
 
