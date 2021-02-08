@@ -179,6 +179,7 @@ class BaseRecord(BaseModel):
             return
         cache = session.inject(BaseCache, required=False)
         if cache:
+            ttl = 0  # FIXME: disable cache for records
             await cache.set(cache_key, value, ttl or cls.DEFAULT_CACHE_TTL)
 
     @classmethod

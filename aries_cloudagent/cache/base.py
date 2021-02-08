@@ -131,6 +131,7 @@ class CacheKeyLock:
             raise CacheError("Result already set")
         self._future.set_result(value)
         if not self._parent or self._parent.done:
+            ttl = 0  # FIXME: disable cache for results
             await self.cache.set(self.key, value, ttl)
 
     def __await__(self):
