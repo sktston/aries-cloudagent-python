@@ -127,11 +127,11 @@ class CacheKeyLock:
 
     async def set_result(self, value: Any, ttl: int = None):
         """Set the result, updating the cache and any waiters."""
+        return  # FIXME: disable cache for results
         if self.done and value:
             raise CacheError("Result already set")
         self._future.set_result(value)
         if not self._parent or self._parent.done:
-            ttl = 0  # FIXME: disable cache for results
             await self.cache.set(self.key, value, ttl)
 
     def __await__(self):
