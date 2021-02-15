@@ -740,7 +740,9 @@ class AdminServer(BaseAdminServer):
         if wallet_id:
             metadata = {"x-wallet-id": wallet_id}
 
+        LOGGER.info("webhook_urls: " + str(webhook_urls))
         if self.webhook_router:
+            LOGGER.info("trying to webhook_router")
             # for idx, target in self.webhook_targets.items():
             #     if not target.topic_filter or topic in target.topic_filter:
             for endpoint in webhook_urls:
