@@ -33,6 +33,7 @@ class InvitationRecord(BaseExchangeRecord):
         invi_msg_id: str = None,
         invitation: dict = None,  # serialized invitation message
         invitation_url: str = None,
+        public_did: str = None,  # public DID in invitation; none if peer DID
         trace: bool = False,
         **kwargs,
     ):
