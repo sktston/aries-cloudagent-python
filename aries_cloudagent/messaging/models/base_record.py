@@ -364,7 +364,7 @@ class BaseRecord(BaseModel):
         webhook_topic = self.webhook_topic
         if webhook is None:
             webhook = bool(webhook_topic) and (new_record or (last_state != self.state))
-        LOGGER.info("post_save webhook: " + str(webhook) + ", session.settings: " + str(session.settings))
+        LOGGER.info("post_save webhook: " + str(webhook) + ", session.profile.settings: " + str(session.profile.settings))
         if webhook:
             await self.send_webhook(
                 session, self.webhook_payload, topic=self.webhook_topic
@@ -408,6 +408,7 @@ class BaseRecord(BaseModel):
             if not topic:
                 return
         responder = session.inject(BaseResponder, required=False)
+        LOGGER.info("responder._profile.settings: " + str(responder._profile.settings))
         if responder:
             await responder.send_webhook(topic, payload)
 

@@ -740,6 +740,7 @@ class AdminServer(BaseAdminServer):
         if wallet_id:
             metadata = {"x-wallet-id": wallet_id}
 
+        LOGGER.info("profile.settings: " + str(profile.settings))
         LOGGER.info("webhook_urls: " + str(webhook_urls))
         if self.webhook_router:
             LOGGER.info("trying to webhook_router")

@@ -6,6 +6,9 @@ from .base import BaseProvider, BaseInjector, InjectionError, InjectType
 from .provider import InstanceProvider, CachedProvider
 from .settings import Settings
 
+import logging
+LOGGER = logging.getLogger(__name__)
+
 
 class Injector(BaseInjector):
     """Injector implementation with static and dynamic bindings."""
@@ -69,6 +72,8 @@ class Injector(BaseInjector):
             An instance of the base class, or None
 
         """
+
+        LOGGER.info("self.settings: " + str(self.settings))
         if not base_cls:
             raise InjectionError("No base class provided for lookup")
         provider = self._providers.get(base_cls)
