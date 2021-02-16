@@ -21,10 +21,6 @@ from ..util import datetime_to_str, time_now
 from ..valid import INDY_ISO8601_DATETIME
 
 
-import logging
-LOGGER = logging.getLogger(__name__)
-
-
 def match_post_filter(
     record: dict,
     post_filter: dict,
@@ -364,7 +360,6 @@ class BaseRecord(BaseModel):
         webhook_topic = self.webhook_topic
         if webhook is None:
             webhook = bool(webhook_topic) and (new_record or (last_state != self.state))
-        LOGGER.info("post_save webhook: " + str(webhook) + ", session.profile.settings: " + str(session.profile.settings))
         if webhook:
             await self.send_webhook(
                 session, self.webhook_payload, topic=self.webhook_topic
