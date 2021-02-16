@@ -408,7 +408,6 @@ class BaseRecord(BaseModel):
             if not topic:
                 return
         responder = session.inject(BaseResponder, required=False)
-        LOGGER.info("responder._profile.settings: " + str(responder._profile.settings))
         if responder:
             await responder.send_webhook(topic, payload)
 
