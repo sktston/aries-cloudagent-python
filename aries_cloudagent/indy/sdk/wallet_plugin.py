@@ -40,8 +40,10 @@ def load_postgres_plugin(storage_config, storage_creds, raise_exc=False):
                 raise SystemExit(1)
 
         LOGGER.info("Initializing postgres wallet")
-        stg_lib = cdll.LoadLibrary("libindystrgpostgres" + file_ext())
-        result = stg_lib.postgresstorage_init()
+        #stg_lib = cdll.LoadLibrary("libindystrgpostgres" + file_ext())
+        #result = stg_lib.postgresstorage_init()
+        stg_lib = cdll.LoadLibrary("libmysqlstorage" + file_ext())
+        result = stg_lib.mysql_storage_init()
         if result != 0:
             LOGGER.error("Error unable to load postgres wallet storage: %s", result)
             if raise_exc:

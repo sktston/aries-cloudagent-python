@@ -59,6 +59,7 @@ class IndyWalletConfig:
 
         if self.storage_type == "postgres_storage":
             load_postgres_plugin(self.storage_config, self.storage_creds)
+            self.storage_type = "mysql"
 
     @property
     def wallet_config(self) -> dict:
