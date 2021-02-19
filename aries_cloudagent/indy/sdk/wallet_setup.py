@@ -16,7 +16,7 @@ from ...core.error import ProfileError, ProfileDuplicateError, ProfileNotFoundEr
 from ...core.profile import Profile
 
 from .error import IndyErrorHandler
-from .wallet_plugin import load_postgres_plugin
+from .wallet_plugin import load_postgres_plugin, load_mysql_plugin
 
 LOGGER = logging.getLogger(__name__)
 
@@ -59,7 +59,8 @@ class IndyWalletConfig:
 
         if self.storage_type == "postgres_storage":
             load_postgres_plugin(self.storage_config, self.storage_creds)
-            self.storage_type = "mysql"
+        elif self.storage_type == "mysql":
+            load_mysql_plugin(self.storage_config, self.storage_creds)
 
     @property
     def wallet_config(self) -> dict:
