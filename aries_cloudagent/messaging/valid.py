@@ -15,6 +15,9 @@ from ..revocation.models.revocation_registry import RevocationRegistry
 from ..wallet.did_posture import DIDPosture as DIDPostureEnum
 
 B58 = alphabet if isinstance(alphabet, str) else alphabet.decode("ascii")
+DID_PREFIX_L = "did"
+DID_PREFIX_R = "ssw"
+DID_PREFIX = f"{DID_PREFIX_L}:{DID_PREFIX_R}"
 
 
 class IntEpoch(Range):
@@ -131,8 +134,8 @@ class IndyRevRegSize(Range):
 class JWSHeaderKid(Regexp):
     """Validate value against JWS header kid."""
 
-    EXAMPLE = "did:sov:LjgpST2rjsoxYegQDRm7EL#keys-4"
-    PATTERN = rf"^did:(?:key:z[{B58}]+|sov:[{B58}]{{21,22}}(;.*)?(\?.*)?#.+)$"
+    EXAMPLE = f"{DID_PREFIX}:LjgpST2rjsoxYegQDRm7EL#keys-4"
+    PATTERN = rf"^did:(?:key:z[{B58}]+|{DID_PREFIX_R}:[{B58}]{{21,22}}(;.*)?(\?.*)?#.+)$"
 
     def __init__(self):
         """Initializer."""
@@ -194,14 +197,14 @@ class IndyDID(Regexp):
     """Validate value against indy DID."""
 
     EXAMPLE = "WgWxqztrNooG92RXvxSTWv"
-    PATTERN = rf"^(did:sov:)?[{B58}]{{21,22}}$"
+    PATTERN = rf"^({DID_PREFIX}:)?[{B58}]{{21,22}}$"
 
     def __init__(self):
         """Initializer."""
 
         super().__init__(
             IndyDID.PATTERN,
-            error="Value {input} is not an indy decentralized identifier (DID)",
+            error="Value {input} is not an ssw decentralized identifier (DID)",
         )
 
 
