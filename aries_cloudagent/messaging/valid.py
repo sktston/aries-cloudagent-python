@@ -15,9 +15,8 @@ from ..revocation.models.revocation_registry import RevocationRegistry
 from ..wallet.did_posture import DIDPosture as DIDPostureEnum
 
 B58 = alphabet if isinstance(alphabet, str) else alphabet.decode("ascii")
-DID_PREFIX_L = "did"
 DID_PREFIX_R = "ssw"
-DID_PREFIX = f"{DID_PREFIX_L}:{DID_PREFIX_R}"
+DID_PREFIX = f"did:{DID_PREFIX_R}"
 
 
 class IntEpoch(Range):
