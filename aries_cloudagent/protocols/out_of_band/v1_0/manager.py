@@ -20,6 +20,7 @@ from ....messaging.responder import BaseResponder
 from ....messaging.decorators.attach_decorator import AttachDecorator
 from ....ledger.base import BaseLedger
 from ....ledger.error import LedgerError
+from ....messaging.valid import DID_PREFIX
 from ....multitenant.manager import MultitenantManager
 from ....storage.error import StorageNotFoundError
 from ....transport.inbound.receipt import MessageReceipt
@@ -210,7 +211,7 @@ class OutOfBandManager(BaseConnectionManager):
                 label=my_label or self._session.settings.get("default_label"),
                 handshake_protocols=handshake_protocols,
                 request_attach=message_attachments,
-                service=[f"did:sov:{public_did.did}"],
+                service=[f"{DID_PREFIX}:{public_did.did}"],
             )
             keylist_updates = await mediation_mgr.add_key(
                 public_did.verkey, keylist_updates

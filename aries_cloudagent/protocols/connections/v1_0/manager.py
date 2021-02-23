@@ -17,6 +17,7 @@ from ....connections.util import mediation_record_if_id
 from ....core.error import BaseError
 from ....core.profile import ProfileSession
 from ....messaging.responder import BaseResponder
+from ....messaging.valid import DID_PREFIX
 from ....protocols.routing.v1_0.manager import RoutingManager
 from ....storage.error import StorageError, StorageNotFoundError
 from ....transport.inbound.receipt import MessageReceipt
@@ -159,7 +160,7 @@ class ConnectionManager(BaseConnectionManager):
 
             # FIXME - allow ledger instance to format public DID with prefix?
             invitation = ConnectionInvitation(
-                label=my_label, did=f"did:sov:{public_did.did}", image_url=image_url
+                label=my_label, did=f"{DID_PREFIX}:{public_did.did}", image_url=image_url
             )
 
             # Add mapping for multitenant relaying.
