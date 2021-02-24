@@ -20,6 +20,7 @@ import json
 
 from asynctest import TestCase as AsyncTestCase, mock as async_mock
 
+from aries_cloudagent.messaging.valid import DID_PREFIX
 from .. import DIDDoc, PublicKey, PublicKeyType, Service
 from ..util import canon_did, canon_ref
 
@@ -30,38 +31,38 @@ class TestDIDDoc(AsyncTestCase):
         # One authn key by reference
         dd_in = {
             "@context": "https://w3id.org/did/v1",
-            "id": "did:sov:LjgpST2rjsoxYegQDRm7EL",
+            "id": f"{DID_PREFIX}:LjgpST2rjsoxYegQDRm7EL",
             "publicKey": [
                 {
                     "id": "3",
                     "type": "RsaVerificationKey2018",
-                    "controller": "did:sov:LjgpST2rjsoxYegQDRm7EL",
+                    "controller": f"{DID_PREFIX}:LjgpST2rjsoxYegQDRm7EL",
                     "publicKeyPem": "-----BEGIN PUBLIC X...",
                 },
                 {
                     "id": "4",
                     "type": "RsaVerificationKey2018",
-                    "controller": "did:sov:LjgpST2rjsoxYegQDRm7EL",
+                    "controller": f"{DID_PREFIX}:LjgpST2rjsoxYegQDRm7EL",
                     "publicKeyPem": "-----BEGIN PUBLIC 9...",
                 },
                 {
                     "id": "6",
                     "type": "RsaVerificationKey2018",
-                    "controller": "did:sov:LjgpST2rjsoxYegQDRm7EL",
+                    "controller": f"{DID_PREFIX}:LjgpST2rjsoxYegQDRm7EL",
                     "publicKeyPem": "-----BEGIN PUBLIC A...",
                 },
             ],
             "authentication": [
                 {
                     "type": "RsaSignatureAuthentication2018",
-                    "publicKey": "did:sov:LjgpST2rjsoxYegQDRm7EL#4",
+                    "publicKey": f"{DID_PREFIX}:LjgpST2rjsoxYegQDRm7EL#4",
                 }
             ],
             "service": [
                 {
                     "id": "0",
                     "type": "Agency",
-                    "serviceEndpoint": "did:sov:Q4zqM7aXqm7gDQkUVLng9h",
+                    "serviceEndpoint": f"{DID_PREFIX}:Q4zqM7aXqm7gDQkUVLng9h",
                 }
             ],
         }
@@ -107,36 +108,36 @@ class TestDIDDoc(AsyncTestCase):
         # One authn key embedded, all possible refs canonical
         dd_in = {
             "@context": "https://w3id.org/did/v1",
-            "id": "did:sov:LjgpST2rjsoxYegQDRm7EL",
+            "id": f"{DID_PREFIX}:LjgpST2rjsoxYegQDRm7EL",
             "publicKey": [
                 {
                     "id": "3",
                     "type": "RsaVerificationKey2018",
-                    "controller": "did:sov:LjgpST2rjsoxYegQDRm7EL",
+                    "controller": f"{DID_PREFIX}:LjgpST2rjsoxYegQDRm7EL",
                     "publicKeyPem": "-----BEGIN PUBLIC X...",
                 },
                 {
-                    "id": "did:sov:LjgpST2rjsoxYegQDRm7EL#4",
+                    "id": f"{DID_PREFIX}:LjgpST2rjsoxYegQDRm7EL#4",
                     "type": "RsaVerificationKey2018",
-                    "controller": "did:sov:LjgpST2rjsoxYegQDRm7EL",
+                    "controller": f"{DID_PREFIX}:LjgpST2rjsoxYegQDRm7EL",
                     "publicKeyPem": "-----BEGIN PUBLIC 9...",
                 },
             ],
             "authentication": [
                 {
                     "type": "RsaSignatureAuthentication2018",
-                    "publicKey": "did:sov:LjgpST2rjsoxYegQDRm7EL#4",
+                    "publicKey": f"{DID_PREFIX}:LjgpST2rjsoxYegQDRm7EL#4",
                 },
                 {
-                    "id": "did:sov:LjgpST2rjsoxYegQDRm7EL#6",
+                    "id": f"{DID_PREFIX}:LjgpST2rjsoxYegQDRm7EL#6",
                     "type": "RsaVerificationKey2018",
-                    "controller": "did:sov:LjgpST2rjsoxYegQDRm7EL",
+                    "controller": f"{DID_PREFIX}:LjgpST2rjsoxYegQDRm7EL",
                     "publicKeyPem": "-----BEGIN PUBLIC A...",
                 },
             ],
             "service": [
                 {
-                    "id": "did:sov:LjgpST2rjsoxYegQDRm7EL;0",
+                    "id": f"{DID_PREFIX}:LjgpST2rjsoxYegQDRm7EL;0",
                     "type": "Agency",
                     "serviceEndpoint": "https://www.von.ca",
                 }
@@ -154,36 +155,36 @@ class TestDIDDoc(AsyncTestCase):
         # All references canonical where possible; one authn key embedded and one by reference
         dd_in = {
             "@context": "https://w3id.org/did/v1",
-            "id": "did:sov:LjgpST2rjsoxYegQDRm7EL",
+            "id": f"{DID_PREFIX}:LjgpST2rjsoxYegQDRm7EL",
             "publicKey": [
                 {
-                    "id": "did:sov:LjgpST2rjsoxYegQDRm7EL#3",
+                    "id": f"{DID_PREFIX}:LjgpST2rjsoxYegQDRm7EL#3",
                     "type": "RsaVerificationKey2018",
-                    "controller": "did:sov:LjgpST2rjsoxYegQDRm7EL",
+                    "controller": f"{DID_PREFIX}:LjgpST2rjsoxYegQDRm7EL",
                     "publicKeyPem": "-----BEGIN PUBLIC X...",
                 },
                 {
-                    "id": "did:sov:LjgpST2rjsoxYegQDRm7EL#4",
+                    "id": f"{DID_PREFIX}:LjgpST2rjsoxYegQDRm7EL#4",
                     "type": "RsaVerificationKey2018",
-                    "controller": "did:sov:LjgpST2rjsoxYegQDRm7EL",
+                    "controller": f"{DID_PREFIX}:LjgpST2rjsoxYegQDRm7EL",
                     "publicKeyPem": "-----BEGIN PUBLIC 9...",
                 },
             ],
             "authentication": [
                 {
                     "type": "RsaSignatureAuthentication2018",
-                    "publicKey": "did:sov:LjgpST2rjsoxYegQDRm7EL#4",
+                    "publicKey": f"{DID_PREFIX}:LjgpST2rjsoxYegQDRm7EL#4",
                 },
                 {
-                    "id": "did:sov:LjgpST2rjsoxYegQDRm7EL#6",
+                    "id": f"{DID_PREFIX}:LjgpST2rjsoxYegQDRm7EL#6",
                     "type": "RsaVerificationKey2018",
-                    "controller": "did:sov:LjgpST2rjsoxYegQDRm7EL",
+                    "controller": f"{DID_PREFIX}:LjgpST2rjsoxYegQDRm7EL",
                     "publicKeyPem": "-----BEGIN PUBLIC A...",
                 },
             ],
             "service": [
                 {
-                    "id": "did:sov:LjgpST2rjsoxYegQDRm7EL;0",
+                    "id": f"{DID_PREFIX}:LjgpST2rjsoxYegQDRm7EL;0",
                     "type": "DidMessaging",
                     "serviceEndpoint": "https://www.von.ca",
                 }
@@ -283,9 +284,9 @@ class TestDIDDoc(AsyncTestCase):
                     "publicKeyHex": "02b97c30de767f084ce3080168ee293053ba33b235d7116a3263d29f1450936b71",
                 },
                 {
-                    "id": "did:sov:LjgpST2rjsoxYegQDRm7EL#keys-4",
+                    "id": f"{DID_PREFIX}:LjgpST2rjsoxYegQDRm7EL#keys-4",
                     "type": "RsaVerificationKey2018",
-                    "controller": "did:sov:LjgpST2rjsoxYegQDRm7EL",
+                    "controller": f"{DID_PREFIX}:LjgpST2rjsoxYegQDRm7EL",
                     "publicKeyPem": "-----BEGIN PUBLIC A...",
                 },
             ],
@@ -295,7 +296,7 @@ class TestDIDDoc(AsyncTestCase):
                     "type": "DidMessaging",
                     "priority": 0,
                     "recipientKeys": ["~ZZZZZZZZZZZZZZZZ"],
-                    "serviceEndpoint": "did:sov:LjgpST2rjsoxYegQDRm7EL;1",
+                    "serviceEndpoint": f"{DID_PREFIX}:LjgpST2rjsoxYegQDRm7EL;1",
                 },
                 {
                     "id": "1",
@@ -303,9 +304,9 @@ class TestDIDDoc(AsyncTestCase):
                     "priority": 1,
                     "recipientKeys": [
                         "~XXXXXXXXXXXXXXXX",
-                        "did:sov:LjgpST2rjsoxYegQDRm7EL#keys-1",
+                        f"{DID_PREFIX}:LjgpST2rjsoxYegQDRm7EL#keys-1",
                     ],
-                    "routingKeys": ["did:sov:LjgpST2rjsoxYegQDRm7EL#keys-4"],
+                    "routingKeys": [f"{DID_PREFIX}:LjgpST2rjsoxYegQDRm7EL#keys-4"],
                     "serviceEndpoint": "LjgpST2rjsoxYegQDRm7EL;2",
                 },
                 {
@@ -314,9 +315,9 @@ class TestDIDDoc(AsyncTestCase):
                     "priority": 2,
                     "recipientKeys": [
                         "~XXXXXXXXXXXXXXXX",
-                        "did:sov:LjgpST2rjsoxYegQDRm7EL#keys-1",
+                        f"{DID_PREFIX}:LjgpST2rjsoxYegQDRm7EL#keys-1",
                     ],
-                    "routingKeys": ["did:sov:LjgpST2rjsoxYegQDRm7EL#keys-4"],
+                    "routingKeys": [f"{DID_PREFIX}:LjgpST2rjsoxYegQDRm7EL#keys-4"],
                     "serviceEndpoint": "https://www.two.ca/two",
                 },
             ],
@@ -332,13 +333,13 @@ class TestDIDDoc(AsyncTestCase):
         )
         assert (
             "routingKeys"
-            not in dd.service["did:sov:LjgpST2rjsoxYegQDRm7EL;indy"].to_dict()
+            not in dd.service[f"{DID_PREFIX}:LjgpST2rjsoxYegQDRm7EL;indy"].to_dict()
         )
         assert all(
             len(dd.service[k].to_dict()["routingKeys"]) == 1
             for k in (
-                "did:sov:LjgpST2rjsoxYegQDRm7EL;1",
-                "did:sov:LjgpST2rjsoxYegQDRm7EL;2",
+                f"{DID_PREFIX}:LjgpST2rjsoxYegQDRm7EL;1",
+                f"{DID_PREFIX}:LjgpST2rjsoxYegQDRm7EL;2",
             )
         )
 
@@ -385,7 +386,7 @@ class TestDIDDoc(AsyncTestCase):
                     "id": "LjgpST2rjsoxYegQDRm7EL;indy",
                     "type": "DidMessaging",
                     "priority": 1,
-                    "recipientKeys": ["did:sov:LjgpST2rjsoxYegQDRm7EL#keys-3"],
+                    "recipientKeys": [f"{DID_PREFIX}:LjgpST2rjsoxYegQDRm7EL#keys-3"],
                     "serviceEndpoint": "https://www.von.ca",
                 }
             ],
@@ -399,12 +400,12 @@ class TestDIDDoc(AsyncTestCase):
         # Minimal as per W3C Example 2, draft 0.12
         dd_in = {
             "@context": "https://w3id.org/did/v1",
-            "id": "did:sov:LjgpST2rjsoxYegQDRm7EL",
+            "id": f"{DID_PREFIX}:LjgpST2rjsoxYegQDRm7EL",
             "authentication": [
                 {
                     "id": "LjgpST2rjsoxYegQDRm7EL#keys-1",
                     "type": "Ed25519VerificationKey2018",
-                    "controller": "did:sov:LjgpST2rjsoxYegQDRm7EL",
+                    "controller": f"{DID_PREFIX}:LjgpST2rjsoxYegQDRm7EL",
                     "publicKeyBase58": "~XXXXXXXXXXXXXXXX",
                 }
             ],
@@ -432,7 +433,7 @@ class TestDIDDoc(AsyncTestCase):
             "authentication": [
                 {
                     "type": "Ed25519VerificationKey2018",
-                    "controller": "did:sov:LjgpST2rjsoxYegQDRm7EL",
+                    "controller": f"{DID_PREFIX}:LjgpST2rjsoxYegQDRm7EL",
                     "publicKeyBase58": "~XXXXXXXXXXXXXXXX",
                 }
             ],
@@ -456,7 +457,7 @@ class TestDIDDoc(AsyncTestCase):
             canon_ref("not-a-DID", ref=valid_did, delimiter="#")
 
         with self.assertRaises(ValueError):
-            canon_ref(valid_did, ref="did:sov:not-a-DID", delimiter="#")
+            canon_ref(valid_did, ref=f"{DID_PREFIX}:not-a-DID", delimiter="#")
 
         urlref = (
             "https://www.clafouti-quasar.ca:8443/supply-management/fruit/index.html"
@@ -467,12 +468,12 @@ class TestDIDDoc(AsyncTestCase):
     def test_pubkey_type(self):
         dd_in = {
             "@context": "https://w3id.org/did/v1",
-            "id": "did:sov:LjgpST2rjsoxYegQDRm7EL",
+            "id": f"{DID_PREFIX}:LjgpST2rjsoxYegQDRm7EL",
             "authentication": [
                 {
                     "id": "LjgpST2rjsoxYegQDRm7EL#keys-1",
                     "type": "Ed25519VerificationKey2018",
-                    "controller": "did:sov:LjgpST2rjsoxYegQDRm7EL",
+                    "controller": f"{DID_PREFIX}:LjgpST2rjsoxYegQDRm7EL",
                     "publicKeyBase58": "~XXXXXXXXXXXXXXXX",
                 }
             ],
