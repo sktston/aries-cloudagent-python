@@ -92,7 +92,7 @@ class ConnectionManager(BaseConnectionManager):
             {
                 "@type": "https://didcomm.org/connections/1.0/invitation",
                 "label": "Alice",
-                "did": "did:sov:QmWbsNYhMrjHiqZDTUTEJs"
+                "did": "did:ssw:QmWbsNYhMrjHiqZDTUTEJs"
             }
 
         Or, in the case of a peer DID:
