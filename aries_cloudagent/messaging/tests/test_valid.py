@@ -34,7 +34,7 @@ from ..valid import (
     JWT,
     SHA256,
     UUID4,
-    WHOLE_NUM,
+    WHOLE_NUM, DID_PREFIX,
 )
 
 
@@ -104,7 +104,7 @@ class TestValid(TestCase):
             "Q4zqM7aXqm7gDQkUVLng9I",  # 'I' not a base58 char
             "Q4zqM7aXqm7gDQkUVLng",  # too short
             "Q4zqM7aXqm7gDQkUVLngZZZ",  # too long
-            "did:sov:Q4zqM7aXqm7gDQkUVLngZZZ",  # too long
+            f"{DID_PREFIX}:Q4zqM7aXqm7gDQkUVLngZZZ",  # too long
             "did:other:Q4zqM7aXqm7gDQkUVLng9h",  # specifies non-indy DID
         ]
         for non_indy_did in non_indy_dids:
@@ -112,7 +112,7 @@ class TestValid(TestCase):
                 INDY_DID["validate"](non_indy_did)
 
         INDY_DID["validate"]("Q4zqM7aXqm7gDQkUVLng9h")  # TODO: accept non-indy dids
-        INDY_DID["validate"]("did:sov:Q4zqM7aXqm7gDQkUVLng9h")
+        INDY_DID["validate"](f"{DID_PREFIX}:Q4zqM7aXqm7gDQkUVLng9h")
 
     def test_indy_raw_public_key(self):
         non_indy_raw_public_keys = [
@@ -129,7 +129,7 @@ class TestValid(TestCase):
     def test_jws_header_kid(self):
         non_kids = [
             "http://not-this.one",
-            "did:sov:i",  # too short
+            f"{DID_PREFIX}:i",  # too short
             "did:key:Q4zqM7aXqm7gDQkUVLng9h"  # missing leading z
             "did:key:zI4zqM7aXqm7gDQkUVLng9h",  # 'I' not a base58 char
         ]
@@ -138,15 +138,15 @@ class TestValid(TestCase):
                 JWS_HEADER_KID["validate"](non_kid)
 
         JWS_HEADER_KID["validate"]("did:key:zQ4zqM7aXqm7gDQkUVLng9h")
-        JWS_HEADER_KID["validate"]("did:sov:Q4zqM7aXqm7gDQkUVLng9h#abc-123")
+        JWS_HEADER_KID["validate"](f"{DID_PREFIX}:Q4zqM7aXqm7gDQkUVLng9h#abc-123")
         JWS_HEADER_KID["validate"](
-            "did:sov:Q4zqM7aXqm7gDQkUVLng9h?version-time=1234567890#abc-123"
+            f"{DID_PREFIX}:Q4zqM7aXqm7gDQkUVLng9h?version-time=1234567890#abc-123"
         )
         JWS_HEADER_KID["validate"](
-            "did:sov:Q4zqM7aXqm7gDQkUVLng9h?version-time=1234567890&a=b#abc-123"
+            f"{DID_PREFIX}:Q4zqM7aXqm7gDQkUVLng9h?version-time=1234567890&a=b#abc-123"
         )
         JWS_HEADER_KID["validate"](
-            "did:sov:Q4zqM7aXqm7gDQkUVLng9h;foo:bar=low;a=b?version-id=1&a=b#abc-123"
+            f"{DID_PREFIX}:Q4zqM7aXqm7gDQkUVLng9h;foo:bar=low;a=b?version-id=1&a=b#abc-123"
         )
 
     def test_jwt(self):

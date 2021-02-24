@@ -17,6 +17,7 @@ from .....ledger.base import BaseLedger
 from .....messaging.decorators.attach_decorator import AttachDecorator
 from .....messaging.responder import BaseResponder, MockResponder
 from .....messaging.util import str_to_datetime, str_to_epoch
+from .....messaging.valid import DID_PREFIX
 from .....multitenant.manager import MultitenantManager
 from .....protocols.connections.v1_0.manager import ConnectionManager
 from .....protocols.coordinate_mediation.v1_0.models.mediation_record import (
@@ -272,7 +273,7 @@ class TestOOBManager(AsyncTestCase, TestConfig):
                 DIDCommPrefix.qualify_current(HSProto.RFC23.name)
                 in invi_rec.invitation["handshake_protocols"]
             )
-            assert invi_rec.invitation["service"] == [f"did:sov:{TestConfig.test_did}"]
+            assert invi_rec.invitation["service"] == [f"{DID_PREFIX}:{TestConfig.test_did}"]
 
     async def test_create_invitation_mediation_overwrites_routing_and_endpoint(self):
         mock_conn_rec = async_mock.MagicMock()
