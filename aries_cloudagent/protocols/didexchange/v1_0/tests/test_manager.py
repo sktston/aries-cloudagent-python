@@ -17,6 +17,7 @@ from .....ledger.base import BaseLedger
 from .....ledger.error import LedgerError
 from .....messaging.responder import BaseResponder, MockResponder
 from .....messaging.decorators.attach_decorator import AttachDecorator
+from .....messaging.valid import DID_PREFIX
 from .....multitenant.manager import MultitenantManager
 from .....storage.error import StorageNotFoundError
 from .....transport.inbound.receipt import MessageReceipt
@@ -395,7 +396,7 @@ class TestDidExchangeManager(AsyncTestCase, TestConfig):
                     ),
                 )
             ),
-            _thread=async_mock.MagicMock(pthid="did:sov:publicdid0000000000000"),
+            _thread=async_mock.MagicMock(pthid=f"{DID_PREFIX}:publicdid0000000000000"),
         )
 
         mediation_record = MediationRecord(
@@ -665,7 +666,7 @@ class TestDidExchangeManager(AsyncTestCase, TestConfig):
         mock_request = async_mock.MagicMock(
             did=TestConfig.test_did,
             did_doc_attach=None,
-            _thread=async_mock.MagicMock(pthid="did:sov:publicdid0000000000000"),
+            _thread=async_mock.MagicMock(pthid=f"{DID_PREFIX}:publicdid0000000000000"),
         )
 
         await self.session.wallet.create_local_did(seed=None, did=TestConfig.test_did)
@@ -718,7 +719,7 @@ class TestDidExchangeManager(AsyncTestCase, TestConfig):
                     ),
                 )
             ),
-            _thread=async_mock.MagicMock(pthid="did:sov:publicdid0000000000000"),
+            _thread=async_mock.MagicMock(pthid=f"{DID_PREFIX}:publicdid0000000000000"),
         )
 
         await self.session.wallet.create_local_did(seed=None, did=TestConfig.test_did)
@@ -756,7 +757,7 @@ class TestDidExchangeManager(AsyncTestCase, TestConfig):
                     ),
                 )
             ),
-            _thread=async_mock.MagicMock(pthid="did:sov:publicdid0000000000000"),
+            _thread=async_mock.MagicMock(pthid=f"{DID_PREFIX}:publicdid0000000000000"),
         )
 
         await self.session.wallet.create_local_did(seed=None, did=TestConfig.test_did)
@@ -810,7 +811,7 @@ class TestDidExchangeManager(AsyncTestCase, TestConfig):
                     verify=async_mock.CoroutineMock(return_value=False)
                 )
             ),
-            _thread=async_mock.MagicMock(pthid="did:sov:publicdid0000000000000"),
+            _thread=async_mock.MagicMock(pthid=f"{DID_PREFIX}:publicdid0000000000000"),
         )
 
         await self.session.wallet.create_local_did(seed=None, did=TestConfig.test_did)
@@ -863,7 +864,7 @@ class TestDidExchangeManager(AsyncTestCase, TestConfig):
                     ),
                 )
             ),
-            _thread=async_mock.MagicMock(pthid="did:sov:publicdid0000000000000"),
+            _thread=async_mock.MagicMock(pthid=f"{DID_PREFIX}:publicdid0000000000000"),
         )
 
         await self.session.wallet.create_local_did(seed=None, did=TestConfig.test_did)
@@ -906,7 +907,7 @@ class TestDidExchangeManager(AsyncTestCase, TestConfig):
                     ),
                 )
             ),
-            _thread=async_mock.MagicMock(pthid="did:sov:publicdid0000000000000"),
+            _thread=async_mock.MagicMock(pthid=f"{DID_PREFIX}:publicdid0000000000000"),
         )
 
         await self.session.wallet.create_local_did(seed=None, did=TestConfig.test_did)
@@ -1118,7 +1119,7 @@ class TestDidExchangeManager(AsyncTestCase, TestConfig):
                     ),
                 )
             ),
-            _thread=async_mock.MagicMock(pthid="did:sov:publicdid0000000000000"),
+            _thread=async_mock.MagicMock(pthid=f"{DID_PREFIX}:publicdid0000000000000"),
         )
 
         self.context.update_settings(

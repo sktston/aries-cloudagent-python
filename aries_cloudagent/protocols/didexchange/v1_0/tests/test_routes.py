@@ -2,6 +2,7 @@ from asynctest import TestCase as AsyncTestCase
 from asynctest import mock as async_mock
 
 from .....admin.request_context import AdminRequestContext
+from .....messaging.valid import DID_PREFIX
 from .....storage.error import StorageNotFoundError
 
 from .. import routes as test_module
@@ -146,7 +147,7 @@ class TestDIDExchangeConnRoutes(AsyncTestCase):
             "alias": "Jimmy",
             "my_endpoint": "http://endpoint.ca",
         }
-        self.request._thread.pthid = "did:sov:0000000000000000000000"
+        self.request._thread.pthid = f"{DID_PREFIX}:0000000000000000000000"
         self.request.json = async_mock.CoroutineMock()
 
         mock_conn_rec = async_mock.MagicMock()
@@ -171,7 +172,7 @@ class TestDIDExchangeConnRoutes(AsyncTestCase):
             "alias": "Jimmy",
             "my_endpoint": "http://endpoint.ca",
         }
-        self.request._thread.pthid = "did:sov:0000000000000000000000"
+        self.request._thread.pthid = f"{DID_PREFIX}:0000000000000000000000"
         self.request.json = async_mock.CoroutineMock()
 
         with async_mock.patch.object(
@@ -194,7 +195,7 @@ class TestDIDExchangeConnRoutes(AsyncTestCase):
             "alias": "Jimmy",
             "my_endpoint": "http://endpoint.ca",
         }
-        self.request._thread.pthid = "did:sov:0000000000000000000000"
+        self.request._thread.pthid = f"{DID_PREFIX}:0000000000000000000000"
         self.request.json = async_mock.CoroutineMock()
 
         with async_mock.patch.object(

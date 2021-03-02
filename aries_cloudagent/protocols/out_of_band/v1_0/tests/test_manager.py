@@ -1557,8 +1557,8 @@ class TestOOBManager(AsyncTestCase, TestConfig):
         self.session.context.update_settings({"public_invites": True})
         test_exist_conn = ConnRecord(
             my_did=TestConfig.test_did,
-            their_did="did:sov:LjgpST2rjsoxYegQDRm7EL",
-            their_public_did="did:sov:LjgpST2rjsoxYegQDRm7EL",
+            their_did=f"{DID_PREFIX}:LjgpST2rjsoxYegQDRm7EL",
+            their_public_did=f"{DID_PREFIX}:LjgpST2rjsoxYegQDRm7EL",
             invitation_msg_id="12345678-1234-5678-1234-567812345678",
             their_role=ConnRecord.Role.REQUESTER,
         )
@@ -1568,8 +1568,8 @@ class TestOOBManager(AsyncTestCase, TestConfig):
 
         test_new_conn = ConnRecord(
             my_did=TestConfig.test_did,
-            their_did="did:sov:LjgpST2rjsoxYegQDRm7EL",
-            their_public_did="did:sov:LjgpST2rjsoxYegQDRm7EL",
+            their_did=f"{DID_PREFIX}:LjgpST2rjsoxYegQDRm7EL",
+            their_public_did=f"{DID_PREFIX}:LjgpST2rjsoxYegQDRm7EL",
             invitation_msg_id="12345678-1234-5678-1234-1234545454487",
             their_role=ConnRecord.Role.REQUESTER,
         )

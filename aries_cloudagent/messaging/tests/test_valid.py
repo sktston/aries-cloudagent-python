@@ -168,7 +168,7 @@ class TestValid(TestCase):
     def test_did_key(self):
         non_did_keys = [
             "http://not-this.one",
-            "did:sov:i",  # wrong preamble
+            f"{DID_PREFIX}:i",  # wrong preamble
             "did:key:Q4zqM7aXqm7gDQkUVLng9h"  # missing leading z
             "did:key:zI4zqM7aXqm7gDQkUVLng9h",  # 'I' not a base58 char
         ]
