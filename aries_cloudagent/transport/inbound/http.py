@@ -9,6 +9,7 @@ from elasticapm.contrib.aiohttp import ElasticAPM
 
 from ...messaging.error import MessageParseError
 
+from ..error import WireFormatParseError
 from ..wire_format import DIDCOMM_V0_MIME_TYPE, DIDCOMM_V1_MIME_TYPE
 
 from .base import BaseInboundTransport, InboundTransportSetupError
@@ -102,7 +103,7 @@ class HttpTransport(BaseInboundTransport):
         async with session:
             try:
                 inbound = await session.receive(body)
-            except MessageParseError:
+            except (MessageParseError, WireFormatParseError):
                 raise web.HTTPBadRequest()
 
             if inbound.receipt.direct_response_requested:
