@@ -274,6 +274,7 @@ class AdminServer(BaseAdminServer):
                     "/ws",  # ws handler checks authentication
                 ]
                 or path.startswith("/static/swagger/")
+                or path.startswith("/agent/swagger-ui")
             )
 
         # If admin_api_key is None, then admin_insecure_mode must be set so
@@ -406,9 +407,24 @@ class AdminServer(BaseAdminServer):
         agent_label = self.context.settings.get("default_label")
         version_string = f"v{__version__}"
 
-        setup_aiohttp_apispec(
-            app=app, title=agent_label, version=version_string, swagger_path="/api/doc"
-        )
+        # if it is the agent in k8s behind the nginx ingress
+        if agent_label == "ACA-Py Agent (Multi-Tenant)":
+            setup_aiohttp_apispec(
+                app=app, 
+                title=agent_label, 
+                version=version_string, 
+                swagger_path="/agent/swagger-ui",
+                static_path="/agent/swagger-ui/static/swagger",
+                url="/agent/swagger-ui/swagger.json",
+                basePath="/agent/api"
+            )
+        else:
+            setup_aiohttp_apispec(
+                app=app,
+                title=agent_label,
+                version=version_string,
+                swagger_path="/api/doc"
+            )
         app.on_startup.append(self.on_startup)
 
         # ensure we always have status values
