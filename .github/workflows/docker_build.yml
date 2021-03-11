@@ -11,7 +11,7 @@ env:
       NCR_REGISTRY_PRIVATE: r5p79moi.private-ncr.fin-ntruss.com
       NCR_REPOSITORY: ston/aca-py
       IMAGE_TAG: ${{ github.sha }}
-      DOCKERFILE_PATH: docker/Dockerfile.run
+      DOCKERFILE_PATH: docker/Dockerfile.run-wait
 jobs:
   build-and-push-image:
     runs-on: ubuntu-latest
