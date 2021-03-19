@@ -51,7 +51,6 @@ class InMemoryCache(BaseCache):
             ttl: number of seconds that the record should persist
 
         """
-        return  # FIXME: disable all cache for testing
         self._remove_expired_cache_items()
         expires_ts = time.perf_counter() + ttl if ttl else None
         for key in [keys] if isinstance(keys, Text) else keys:
