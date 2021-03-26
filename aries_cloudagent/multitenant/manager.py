@@ -171,9 +171,24 @@ class MultitenantManager:
             # MTODO: add ledger config
             profile, _ = await wallet_config(context, provision=provision)
             self._instances[wallet_id] = profile
+        # FIXME: Scale-out support
+        # - wallet_record UPDATE case: OK
+        #   - fetch label, image_url and webhook_urls from db record
+        # - wallet_record DELETE case: Garbage issue
+        #   - deleted profiles remain in self._instances
+        #     (all servers except a server that requested wallet remove API)
+        #     below PR can solve this
+        #     https://github.com/hyperledger/aries-cloudagent-python/pull/928
+        else:
+            profile = self._instances[wallet_id]
+            profile.settings.update(wallet_record.settings)
 
-        # FIXME: Scale-out issue - to get label, image_url and webhook_urls (maybe more?) from db record
-        await self.fetch_wallet(wallet_id)
+            extra_settings = {
+                "admin.webhook_urls": self.get_webhook_urls(
+                    self._profile.context, wallet_record
+                ),
+            }
+            profile.settings.update(extra_settings)
 
         return self._instances[wallet_id]
 
@@ -313,35 +328,6 @@ class MultitenantManager:
             )
 
             await wallet.delete_record(session)
-
-    # FIXME: Scale-out issue - to get label, image_url and webhook_urls (maybe more?) from db record
-    async def fetch_wallet(
-        self,
-        wallet_id: str
-    ):
-        """Get a existing wallet record and fetch profile settings.
-
-        Args:
-            wallet_id: The wallet id of the wallet record
-
-        Returns:
-
-        """
-        # get wallet_record
-        async with self._profile.session() as session:
-            wallet_record = await WalletRecord.retrieve_by_id(session, wallet_id)
-
-        # fetch profile only if loaded
-        if wallet_id in self._instances:
-            profile = self._instances[wallet_id]
-            profile.settings.update(wallet_record.settings)
-
-            extra_settings = {
-                "admin.webhook_urls": self.get_webhook_urls(
-                    self._profile.context, wallet_record
-                ),
-            }
-            profile.settings.update(extra_settings)
 
     async def add_key(
         self, wallet_id: str, recipient_key: str, *, skip_if_exists: bool = False
