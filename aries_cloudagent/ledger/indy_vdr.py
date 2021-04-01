@@ -351,12 +351,33 @@ class IndyVdrLedger(BaseLedger):
 
         return request_result
 
+    async def txn_endorse(
+        self,
+        request_json: str,
+    ) -> str:
+        """Endorse a (signed) ledger transaction."""
+        # FIXME: implement this
+        return None
+
+    async def txn_submit(
+        self,
+        request_json: str,
+        sign: bool = None,
+        taa_accept: bool = None,
+        sign_did: DIDInfo = sentinel,
+    ) -> str:
+        """Submit a signed (and endorsed) transaction to the ledger."""
+        # FIXME: implement this
+        return None
+
     async def create_and_send_schema(
         self,
         issuer: IndyIssuer,
         schema_name: str,
         schema_version: str,
         attribute_names: Sequence[str],
+        write_ledger: bool = True, # FIXME: write_ledger and endorser_did should use
+        endorser_did: str = None,
     ) -> Tuple[str, dict]:
         """
         Send schema to ledger.
@@ -575,6 +596,8 @@ class IndyVdrLedger(BaseLedger):
         signature_type: str = None,
         tag: str = None,
         support_revocation: bool = False,
+        write_ledger: bool = True, # FIXME: write_ledger and endorser_did should use
+        endorser_did: str = None,
     ) -> Tuple[str, dict, bool]:
         """
         Send credential definition to ledger and store relevant key matter in wallet.
