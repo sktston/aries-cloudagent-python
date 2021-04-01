@@ -38,6 +38,7 @@ from .error import (
     LedgerTransactionError,
 )
 from .util import TAA_ACCEPTED_RECORD_TYPE
+from ..wallet.error import WalletNotFoundError
 
 LOGGER = logging.getLogger(__name__)
 
@@ -946,9 +947,13 @@ class IndyVdrLedger(BaseLedger):
 
         async with self.profile.session() as session:
             wallet = session.inject(BaseWallet)
-            did_info = await wallet.get_local_did(did)
-            metadata = {**did_info.metadata, **DIDPosture.POSTED.metadata}
-            await wallet.replace_local_did_metadata(did, metadata)
+            try:
+                did_info = await wallet.get_local_did(did)
+            except WalletNotFoundError:
+                pass  # registering another user's NYM
+            else:
+                metadata = {**did_info.metadata, **DIDPosture.POSTED.metadata}
+                await wallet.replace_local_did_metadata(did, metadata)
 
     async def get_nym_role(self, did: str) -> Role:
         """
