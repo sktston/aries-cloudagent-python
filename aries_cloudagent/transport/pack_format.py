@@ -112,8 +112,6 @@ class PackWireFormat(BaseWireFormat):
         if not wallet:
             raise WireFormatParseError("Wallet not defined in profile session")
 
-        LOGGER.info("message_body: " + message_body.decode("utf-8"));
-
         try:
             unpacked = await wallet.unpack_message(message_body)
             (
@@ -121,7 +119,6 @@ class PackWireFormat(BaseWireFormat):
                 receipt.sender_verkey,
                 receipt.recipient_verkey,
             ) = unpacked
-            LOGGER.info("message_json: " + message_json);
             return message_json
         except WalletError as e:
             raise WireFormatParseError("Message unpack failed") from e
