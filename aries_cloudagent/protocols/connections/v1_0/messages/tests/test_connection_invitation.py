@@ -6,14 +6,13 @@ from .....didcomm_prefix import DIDCommPrefix
 
 from ...message_types import CONNECTION_INVITATION
 from ..connection_invitation import ConnectionInvitation
-from ......messaging.valid import DID_PREFIX
 
 
 class TestConnectionInvitation(TestCase):
     label = "Label"
-    did = f"{DID_PREFIX}:QmWbsNYhMrjHiqZDTUTEJs"
+    did = "did:sov:QmWbsNYhMrjHiqZDTUTEJs"
     endpoint_url = "https://example.com/endpoint"
-    endpoint_did = f"{DID_PREFIX}:A2wBhNYhMrjHiqZDTUYH7u"
+    endpoint_did = "did:sov:A2wBhNYhMrjHiqZDTUYH7u"
     image_url = "https://example.com/image.jpg"
     key = "8HH5gYEeNc3z7PYXmd54d4x6qAfCNrqQqEB3nS7Zfu7K"
 
@@ -87,7 +86,7 @@ class TestConnectionInvitation(TestCase):
 class TestConnectionInvitationSchema(TestCase):
 
     connection_invitation = ConnectionInvitation(
-        label="label", did=f"{DID_PREFIX}:QmWbsNYhMrjHiqZDTUTEJs"
+        label="label", did="did:sov:QmWbsNYhMrjHiqZDTUTEJs"
     )
 
     def test_make_model(self):
@@ -99,12 +98,12 @@ class TestConnectionInvitationSchema(TestCase):
         x_conns = [
             ConnectionInvitation(
                 label="did-and-recip-keys",
-                did=f"{DID_PREFIX}:QmWbsNYhMrjHiqZDTUTEJs",
+                did="did:sov:QmWbsNYhMrjHiqZDTUTEJs",
                 recipient_keys=["8HH5gYEeNc3z7PYXmd54d4x6qAfCNrqQqEB3nS7Zfu7K"],
             ),
             ConnectionInvitation(
                 label="did-and-endpoint",
-                did=f"{DID_PREFIX}:QmWbsNYhMrjHiqZDTUTEJs",
+                did="did:sov:QmWbsNYhMrjHiqZDTUTEJs",
                 endpoint="https://example.com/endpoint",
             ),
             ConnectionInvitation(

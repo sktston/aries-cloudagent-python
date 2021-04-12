@@ -7,7 +7,6 @@ from datetime import datetime, timezone
 from time import time
 from unittest import TestCase
 
-from ...valid import DID_PREFIX
 from ....indy.sdk.wallet_setup import IndyWalletConfig
 from ....messaging.models.base import BaseModelError
 from ....wallet.indy import IndySdkWallet
@@ -29,7 +28,7 @@ from ..attach_decorator import (
 )
 
 
-KID = f"{DID_PREFIX}:LjgpST2rjsoxYegQDRm7EL#keys-4"
+KID = "did:sov:LjgpST2rjsoxYegQDRm7EL#keys-4"
 INDY_CRED = {
     "schema_id": "LjgpST2rjsoxYegQDRm7EL:2:icon:1.0",
     "cred_def_id": "LjgpST2rjsoxYegQDRm7EL:3:CL:19:tag",
@@ -70,9 +69,11 @@ DATA_B64 = AttachDecoratorData(base64_=bytes_to_b64(b"sample image with padding"
 DATA_JSON = AttachDecoratorData(
     json_=json.dumps({"preference": "hasselback", "variety": "russet"})
 )
+LINK_1X1 = "https://upload.wikimedia.org/wikipedia/commons/c/ca/1x1.png"
+SHA256_1X1 = "3eb10792d1f0c7e07e7248273540f1952d9a5a2996f4b5df70ab026cd9f05517"
 DATA_LINKS = AttachDecoratorData(
-    links_="https://upload.wikimedia.org/wikipedia/commons/c/ca/1x1.png",
-    sha256_="3eb10792d1f0c7e07e7248273540f1952d9a5a2996f4b5df70ab026cd9f05517",
+    links_=LINK_1X1,
+    sha256_=SHA256_1X1,
 )
 
 
@@ -326,10 +327,6 @@ class TestAttachDecorator(TestCase):
         deco_b64_auto_id = AttachDecorator.data_base64(mapping=INDY_CRED)
         assert deco_b64_auto_id.ident
 
-        # cover AttachDecoratorData equality operator
-        plain_json = AttachDecoratorData(json_=json.dumps({"sample": "data"}))
-        assert deco_b64.data != plain_json
-
         # data.json
         deco_json = AttachDecorator.data_json(
             mapping=INDY_CRED,
@@ -355,35 +352,38 @@ class TestAttachDecorator(TestCase):
 
         # data.links
         deco_links = AttachDecorator.data_links(
-            links="http://localhost/x.json",
+            links=LINK_1X1,
+            sha256=SHA256_1X1,
             ident=IDENT,
             description=DESCRIPTION,
         )
         assert deco_links.mime_type == "application/json"
         assert hasattr(deco_links.data, "links_")
+        assert hasattr(deco_links.data, "sha256_")
         assert deco_links.data.base64 is None
         assert deco_links.data.json is None
         assert deco_links.data.links is not None
-        assert deco_links.data.sha256 is None
-        assert deco_links.content == ["http://localhost/x.json"]
+        assert deco_links.data.sha256 is not None
+        assert deco_links.content == (
+            [
+                LINK_1X1,
+            ],
+            SHA256_1X1,
+        )
         assert deco_links.ident == IDENT
         assert deco_links.description == DESCRIPTION
 
         deco_links_auto_id = AttachDecorator.data_links(links="http://localhost/x.json")
         assert deco_links_auto_id.ident
 
-        # cover AttachDecoratorData equality operator
-        plain_json = AttachDecoratorData(json_=json.dumps({"sample": "data"}))
-        assert deco_links.data != plain_json
-
-        # links coverage
+        # links equality operator coverage
         lynx_str = AttachDecoratorData(links_="https://en.wikipedia.org/wiki/Lynx")
         lynx_list = AttachDecoratorData(links_=["https://en.wikipedia.org/wiki/Lynx"])
         links = AttachDecoratorData(links_="https://en.wikipedia.org/wiki/Chain")
 
         assert lynx_str == lynx_list
         assert lynx_str != links
-        assert links != DATA_LINKS  # has sha256
+        assert links != DATA_LINKS
 
         # formalism for no data
         no_data = AttachDecorator(data=None)

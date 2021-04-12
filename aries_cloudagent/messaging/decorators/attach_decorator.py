@@ -8,7 +8,7 @@ An attach decorator embeds content or specifies appended content.
 import json
 import uuid
 
-from typing import Any, Mapping, Sequence, Union
+from typing import Any, Mapping, Sequence, Tuple, Union
 
 from marshmallow import EXCLUDE, fields, pre_load
 
@@ -22,6 +22,8 @@ from ...wallet.util import (
     set_urlsafe_b64,
     str_to_b64,
     unpad,
+    naked_to_did_key,
+    did_key_to_naked,
 )
 from ..models.base import BaseModel, BaseModelError, BaseModelSchema
 from ..valid import (
@@ -32,9 +34,6 @@ from ..valid import (
     SHA256,
     UUIDFour,
 )
-
-MULTIBASE_B58_BTC = "z"
-MULTICODEC_ED25519_PUB = b"\xed"
 
 
 class AttachDecoratorDataJWSHeader(BaseModel):
@@ -198,19 +197,17 @@ class AttachDecoratorDataJWSSchema(BaseModelSchema):
 def did_key(verkey: str) -> str:
     """Qualify verkey into DID key if need be."""
 
-    if verkey.startswith(f"did:key:{MULTIBASE_B58_BTC}"):
+    if verkey.startswith("did:key:"):
         return verkey
 
-    return f"did:key:{MULTIBASE_B58_BTC}" + bytes_to_b58(
-        MULTICODEC_ED25519_PUB + b58_to_bytes(verkey)
-    )
+    return naked_to_did_key(verkey)
 
 
 def raw_key(verkey: str) -> str:
     """Strip qualified key to raw key if need be."""
 
-    if verkey.startswith(f"did:key:{MULTIBASE_B58_BTC}"):
-        return bytes_to_b58(b58_to_bytes(verkey[9:])[1:])
+    if verkey.startswith("did:key:"):
+        return did_key_to_naked(verkey)
 
     return verkey
 
@@ -546,11 +543,13 @@ class AttachDecorator(BaseModel):
         self.data = data
 
     @property
-    def content(self):
+    def content(self) -> Union[Mapping, Tuple[Sequence[str], str]]:
         """
         Return attachment content.
 
-        Returns: data attachment, decoded if necessary and json-loaded, or data links
+        Returns:
+            data attachment, decoded if necessary and json-loaded, or data links
+            and sha-256 hash.
 
         """
         if hasattr(self.data, "base64_"):
@@ -558,7 +557,10 @@ class AttachDecorator(BaseModel):
         elif hasattr(self.data, "json_"):
             return self.data.json
         elif hasattr(self.data, "links_"):
-            return self.data.links  # fetching would be async; we want a property here
+            return (  # fetching would be async; we want a property here
+                self.data.links,
+                self.data.sha256,
+            )
         else:
             return None
 

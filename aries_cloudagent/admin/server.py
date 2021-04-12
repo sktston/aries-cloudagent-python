@@ -1,10 +1,15 @@
 """Admin server classes."""
 
+import os
 import asyncio
 import logging
-import os
-from typing import Callable, Coroutine, Sequence, Set
+import re
 import uuid
+
+from typing import Callable, Coroutine, Sequence, Set
+
+import aiohttp_cors
+import jwt
 
 from aiohttp import web
 from aiohttp_apispec import (
@@ -13,8 +18,6 @@ from aiohttp_apispec import (
     setup_aiohttp_apispec,
     validation_middleware,
 )
-import aiohttp_cors
-import jwt
 
 from elasticapm.contrib.aiohttp import ElasticAPM
 
@@ -146,10 +149,10 @@ class WebhookTarget:
     @topic_filter.setter
     def topic_filter(self, val: Sequence[str]):
         """Setter for the target's topic filter."""
-        filter = set(val) if val else None
-        if filter and "*" in filter:
-            filter = None
-        self._topic_filter = filter
+        filt = set(val) if val else None
+        if filt and "*" in filt:
+            filt = None
+        self._topic_filter = filt
 
 
 @web.middleware
@@ -341,7 +344,7 @@ class AdminServer(BaseAdminServer):
                         self.context, token
                     )
                 except MultitenantManagerError as err:
-                    raise web.HTTPUnauthorized(err.roll_up)
+                    raise web.HTTPUnauthorized(reason=err.roll_up)
                 except (jwt.InvalidTokenError, StorageNotFoundError):
                     raise web.HTTPUnauthorized()
 
@@ -369,12 +372,20 @@ class AdminServer(BaseAdminServer):
 
         middlewares.append(setup_context)
 
-        app = web.Application(middlewares=middlewares)
+        app = web.Application(
+            middlewares=middlewares,
+            client_max_size=(
+                self.context.settings.get("admin.admin_client_max_request_size", 1)
+                * 1024
+                * 1024
+            ),
+        )
 
         server_routes = [
             web.get("/", self.redirect_handler, allow_head=False),
             web.get("/plugins", self.plugins_handler, allow_head=False),
             web.get("/status", self.status_handler, allow_head=False),
+            web.get("/status/config", self.config_handler, allow_head=False),
             web.post("/status/reset", self.status_reset_handler),
             web.get("/status/live", self.liveliness_handler, allow_head=False),
             web.get("/status/ready", self.readiness_handler, allow_head=False),
@@ -547,6 +558,41 @@ class AdminServer(BaseAdminServer):
         registry = self.context.inject(PluginRegistry, required=False)
         plugins = registry and sorted(registry.plugin_names) or []
         return web.json_response({"result": plugins})
+
+    @docs(tags=["server"], summary="Fetch the server configuration")
+    @response_schema(AdminStatusSchema(), 200, description="")
+    async def config_handler(self, request: web.BaseRequest):
+        """
+        Request handler for the server configuration.
+
+        Args:
+            request: aiohttp request object
+
+        Returns:
+            The web response
+
+        """
+        config = {
+            k: self.context.settings[k]
+            for k in self.context.settings
+            if k
+            not in [
+                "admin.admin_api_key",
+                "multitenant.jwt_secret",
+                "wallet.key",
+                "wallet.rekey",
+                "wallet.seed",
+                "wallet.storage.creds",
+            ]
+        }
+        for index in range(len(config.get("admin.webhook_urls", []))):
+            config["admin.webhook_urls"][index] = re.sub(
+                r"#.*",
+                "",
+                config["admin.webhook_urls"][index],
+            )
+
+        return web.json_response(config)
 
     @docs(tags=["server"], summary="Fetch the server status")
     @response_schema(AdminStatusSchema(), 200, description="")

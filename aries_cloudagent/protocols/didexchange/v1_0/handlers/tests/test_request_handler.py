@@ -13,7 +13,6 @@ from ......core.in_memory import InMemoryProfile
 from ......messaging.decorators.attach_decorator import AttachDecorator
 from ......messaging.request_context import RequestContext
 from ......messaging.responder import MockResponder
-from ......messaging.valid import DID_PREFIX
 from ......storage.base import BaseStorage
 from ......storage.error import StorageNotFoundError
 from ......transport.inbound.receipt import MessageReceipt
@@ -100,9 +99,9 @@ class TestDIDXRequestHandler(AsyncTestCase):
 
     async def test_connection_record_with_mediation_metadata(self):
         test_exist_conn = conn_record.ConnRecord(
-            my_did=f"{DID_PREFIX}:LjgpST2rjsoxYegQDRm7EL",
-            their_did=f"{DID_PREFIX}:LjgpST2rjsoxYegQDRm7EL",
-            their_public_did=f"{DID_PREFIX}:LjgpST2rjsoxYegQDRm7EL",
+            my_did="did:sov:LjgpST2rjsoxYegQDRm7EL",
+            their_did="did:sov:LjgpST2rjsoxYegQDRm7EL",
+            their_public_did="did:sov:LjgpST2rjsoxYegQDRm7EL",
             invitation_msg_id="12345678-1234-5678-1234-567812345678",
             their_role=conn_record.ConnRecord.Role.REQUESTER,
         )
