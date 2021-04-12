@@ -2,7 +2,6 @@ from asynctest import TestCase as AsyncTestCase
 
 from unittest import mock, TestCase
 
-from ......messaging.valid import DID_PREFIX
 from ......wallet.util import naked_to_did_key
 from .....out_of_band.v1_0.message_types import INVITATION as OOB_INVITATION
 from .....out_of_band.v1_0.messages.invitation import (
@@ -20,9 +19,9 @@ class TestInvitation(AsyncTestCase):
     def setUp(self):
         self.label = "Label"
         self.test_did = "55GkHamhTU1ZbTbV2ab9DE"
-        self.did = f"{DID_PREFIX}:QmWbsNYhMrjHiqZDTUTEJs"
+        self.did = "did:sov:QmWbsNYhMrjHiqZDTUTEJs"
         self.endpoint_url = "https://example.com/endpoint"
-        self.endpoint_did = f"{DID_PREFIX}:A2wBhNYhMrjHiqZDTUYH7u"
+        self.endpoint_did = "did:sov:A2wBhNYhMrjHiqZDTUYH7u"
         self.key = "8HH5gYEeNc3z7PYXmd54d4x6qAfCNrqQqEB3nS7Zfu7K"
         self.test_message = "test message"
 

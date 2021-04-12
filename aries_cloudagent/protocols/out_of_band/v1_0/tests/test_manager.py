@@ -16,7 +16,6 @@ from .....ledger.base import BaseLedger
 from .....messaging.decorators.attach_decorator import AttachDecorator
 from .....messaging.responder import BaseResponder, MockResponder
 from .....messaging.util import str_to_datetime, str_to_epoch
-from .....messaging.valid import DID_PREFIX
 from .....multitenant.manager import MultitenantManager
 from .....protocols.connections.v1_0.manager import ConnectionManager
 from .....protocols.coordinate_mediation.v1_0.models.mediation_record import (

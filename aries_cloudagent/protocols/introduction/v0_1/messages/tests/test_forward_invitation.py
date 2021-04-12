@@ -2,7 +2,6 @@ from unittest import mock, TestCase
 
 from asynctest import TestCase as AsyncTestCase
 
-from aries_cloudagent.messaging.valid import DID_PREFIX
 from .....connections.v1_0.messages.connection_invitation import ConnectionInvitation
 from .....didcomm_prefix import DIDCommPrefix
 
@@ -13,9 +12,9 @@ from ..forward_invitation import ForwardInvitation
 
 class TestConfig:
     label = "Label"
-    did = f"{DID_PREFIX}:QmWbsNYhMrjHiqZDTUTEJs"
+    did = "did:sov:QmWbsNYhMrjHiqZDTUTEJs"
     endpoint_url = "https://example.com/endpoint"
-    endpoint_did = f"{DID_PREFIX}:A2wBhNYhMrjHiqZDTUYH7u"
+    endpoint_did = "did:sov:A2wBhNYhMrjHiqZDTUYH7u"
     key = "8HH5gYEeNc3z7PYXmd54d4x6qAfCNrqQqEB3nS7Zfu7K"
     test_message = "test message"
 

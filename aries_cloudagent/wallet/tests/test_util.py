@@ -16,7 +16,7 @@ from ..util import (
     naked_to_did_key,
     did_key_to_naked,
 )
-from ...messaging.valid import DID_PREFIX
+
 
 BYTES = b"\xe0\xa0\xbe"  # chr(2110).encode(), least with + in b64 encoding
 STR = "Hello World"  # b64encodes to SGVsbG8gV29ybGQ=

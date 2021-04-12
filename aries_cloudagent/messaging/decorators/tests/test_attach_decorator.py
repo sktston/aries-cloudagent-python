@@ -7,7 +7,6 @@ from datetime import datetime, timezone
 from time import time
 from unittest import TestCase
 
-from ...valid import DID_PREFIX
 from ....indy.sdk.wallet_setup import IndyWalletConfig
 from ....messaging.models.base import BaseModelError
 from ....wallet.indy import IndySdkWallet
@@ -29,7 +28,7 @@ from ..attach_decorator import (
 )
 
 
-KID = f"{DID_PREFIX}:LjgpST2rjsoxYegQDRm7EL#keys-4"
+KID = "did:sov:LjgpST2rjsoxYegQDRm7EL#keys-4"
 INDY_CRED = {
     "schema_id": "LjgpST2rjsoxYegQDRm7EL:2:icon:1.0",
     "cred_def_id": "LjgpST2rjsoxYegQDRm7EL:3:CL:19:tag",
