@@ -176,7 +176,6 @@ class BaseRecord(BaseModel):
             value: The value to cache
             ttl: The cache ttl
         """
-        return  # FIXME: disable cache for records
         if not cache_key:
             return
         cache = session.inject(BaseCache, required=False)
