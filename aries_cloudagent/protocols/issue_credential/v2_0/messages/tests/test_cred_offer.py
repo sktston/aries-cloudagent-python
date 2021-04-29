@@ -75,8 +75,33 @@ class TestV20CredOffer(AsyncTestCase):
         assert TestV20CredOffer.CRED_OFFER.attachment() == TestV20CredOffer.indy_offer
         assert TestV20CredOffer.CRED_OFFER._type == DIDCommPrefix.qualify_current(
             CRED_20_OFFER
+<<<<<<< HEAD
+=======
         )
 
+    async def test_attachment_no_target_format(self):
+        """Test attachment behaviour for only unknown formats."""
+
+        x_cred_offer = V20CredOffer(
+            comment="Test",
+            formats=[V20CredFormat(attach_id="not_indy", format_="not_indy")],
+            offers_attach=[
+                AttachDecorator.data_base64(
+                    ident="not_indy", mapping=TestV20CredOffer.CRED_OFFER.serialize()
+                )
+            ],
+>>>>>>> main
+        )
+        assert x_cred_offer.attachment() is None
+
+    async def test_serde(self):
+        """Test de/serialization."""
+        obj = TestV20CredOffer.CRED_OFFER.serialize()
+
+        cred_offer = V20CredOffer.deserialize(obj)
+        assert type(cred_offer) == V20CredOffer
+
+<<<<<<< HEAD
     async def test_serde(self):
         """Test de/serialization."""
         obj = TestV20CredOffer.CRED_OFFER.serialize()
@@ -88,19 +113,48 @@ class TestV20CredOffer(AsyncTestCase):
         with self.assertRaises(BaseModelError):
             V20CredOffer.deserialize(obj)
 
+=======
+        obj["offers~attach"][0]["data"]["base64"] = "eyJub3QiOiAiaW5keSJ9"
+        with self.assertRaises(BaseModelError):
+            V20CredOffer.deserialize(obj)
+
+>>>>>>> main
         obj["offers~attach"][0]["@id"] = "xxx"
         with self.assertRaises(BaseModelError):
             V20CredOffer.deserialize(obj)
 
         obj["offers~attach"].append(  # more attachments than formats
             {
+<<<<<<< HEAD
                 "@id": "def",
+=======
+                "@id": "not_indy",
+>>>>>>> main
                 "mime-type": "application/json",
                 "data": {"base64": "eyJub3QiOiAiaW5keSJ9"},
             }
         )
         with self.assertRaises(BaseModelError):
             V20CredOffer.deserialize(obj)
+<<<<<<< HEAD
+=======
+
+        cred_offer.formats.append(  # unknown format: no validation
+            V20CredFormat(
+                attach_id="not_indy",
+                format_="not_indy",
+            )
+        )
+        obj = cred_offer.serialize()
+        obj["offers~attach"].append(
+            {
+                "@id": "not_indy",
+                "mime-type": "application/json",
+                "data": {"base64": "eyJub3QiOiAiaW5keSJ9"},
+            }
+        )
+        V20CredOffer.deserialize(obj)
+>>>>>>> main
 
 
 class TestCredentialOfferSchema(AsyncTestCase):

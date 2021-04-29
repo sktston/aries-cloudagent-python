@@ -17,3 +17,14 @@ class DroppedAttributeError(BaseJSONLDMessagingError):
 
 class MissingVerificationMethodError(BaseJSONLDMessagingError):
     """Exception indicating missing verification method from signature options."""
+<<<<<<< HEAD
+=======
+
+
+class SignatureTypeError(BaseJSONLDMessagingError):
+    """Exception indicating Signature type error."""
+
+
+class InvalidVerificationMethod(BaseJSONLDMessagingError):
+    """Exception indicating an invalid verification method in doc to verify."""
+>>>>>>> main

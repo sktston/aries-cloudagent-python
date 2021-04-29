@@ -5,6 +5,16 @@ from enum import Enum
 from typing import Sequence, Union
 
 from pydid import DID, DIDDocument
+<<<<<<< HEAD
+=======
+from pydid.options import (
+    doc_allow_public_key,
+    doc_insert_missing_ids,
+    vm_allow_controller_list,
+    vm_allow_missing_controller,
+    vm_allow_type_list,
+)
+>>>>>>> main
 
 from ..config.injection_context import InjectionContext
 from ..core.error import BaseError
@@ -61,6 +71,7 @@ class BaseDIDResolver(ABC):
 
     async def resolve(self, profile: Profile, did: Union[str, DID]) -> DIDDocument:
         """Resolve a DID using this resolver."""
+<<<<<<< HEAD
         if isinstance(did, str):
             did = DID(did)
 
@@ -76,4 +87,28 @@ class BaseDIDResolver(ABC):
 
     @abstractmethod
     async def _resolve(self, profile: Profile, did: DID) -> dict:
+=======
+        py_did = DID(did) if isinstance(did, str) else did
+
+        if not self.supports(py_did.method):
+            raise DIDMethodNotSupported(
+                f"{self.__class__.__name__} does not support DID method {py_did.method}"
+            )
+
+        did_document = await self._resolve(profile, str(py_did))
+        result = DIDDocument.deserialize(
+            did_document,
+            options={
+                doc_insert_missing_ids,
+                doc_allow_public_key,
+                vm_allow_controller_list,
+                vm_allow_missing_controller,
+                vm_allow_type_list,
+            },
+        )
+        return result
+
+    @abstractmethod
+    async def _resolve(self, profile: Profile, did: str) -> dict:
+>>>>>>> main
         """Resolve a DID using this resolver."""

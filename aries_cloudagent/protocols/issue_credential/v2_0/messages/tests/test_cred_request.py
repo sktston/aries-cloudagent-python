@@ -76,6 +76,7 @@ class TestV20CredRequest(AsyncTestCase):
         assert TestV20CredRequest.CRED_REQUEST._type == DIDCommPrefix.qualify_current(
             CRED_20_REQUEST
         )
+<<<<<<< HEAD
 
     async def test_serde(self):
         """Test de/serialization."""
@@ -92,6 +93,39 @@ class TestV20CredRequest(AsyncTestCase):
         with self.assertRaises(BaseModelError):
             V20CredRequest.deserialize(obj)
 
+=======
+
+    async def test_attachment_no_target_format(self):
+        """Test attachment behaviour for only unknown formats."""
+
+        x_cred_req = V20CredRequest(
+            comment="Test",
+            formats=[V20CredFormat(attach_id="not_indy", format_="not_indy")],
+            requests_attach=[
+                AttachDecorator.data_base64(
+                    ident="not_indy",
+                    mapping=TestV20CredRequest.indy_cred_req,
+                )
+            ],
+        )
+        assert x_cred_req.attachment() is None
+
+    async def test_serde(self):
+        """Test de/serialization."""
+        obj = TestV20CredRequest.CRED_REQUEST.serialize()
+
+        cred_request = V20CredRequest.deserialize(obj)
+        assert type(cred_request) == V20CredRequest
+
+        obj["requests~attach"][0]["data"]["base64"] = "eyJub3QiOiAiaW5keSJ9"
+        with self.assertRaises(BaseModelError):
+            V20CredRequest.deserialize(obj)
+
+        obj["requests~attach"][0]["@id"] = "xxx"
+        with self.assertRaises(BaseModelError):
+            V20CredRequest.deserialize(obj)
+
+>>>>>>> main
         obj["requests~attach"].append(  # more attachments than formats
             {
                 "@id": "def",
@@ -101,6 +135,25 @@ class TestV20CredRequest(AsyncTestCase):
         )
         with self.assertRaises(BaseModelError):
             V20CredRequest.deserialize(obj)
+<<<<<<< HEAD
+=======
+
+        cred_request.formats.append(  # unknown format: no validation
+            V20CredFormat(
+                attach_id="not_indy",
+                format_="not_indy",
+            )
+        )
+        obj = cred_request.serialize()
+        obj["requests~attach"].append(
+            {
+                "@id": "not_indy",
+                "mime-type": "application/json",
+                "data": {"base64": "eyJub3QiOiAiaW5keSJ9"},
+            }
+        )
+        V20CredRequest.deserialize(obj)
+>>>>>>> main
 
 
 class TestV20CredRequestSchema(AsyncTestCase):

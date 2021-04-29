@@ -4,10 +4,6 @@ import logging
 
 from typing import Coroutine, Sequence, Tuple
 
-from aries_cloudagent.protocols.coordinate_mediation.v1_0.manager import (
-    MediationManager,
-)
-
 from ....cache.base import BaseCache
 from ....config.base import InjectionError
 from ....connections.base_manager import BaseConnectionManager
@@ -17,11 +13,16 @@ from ....connections.util import mediation_record_if_id
 from ....core.error import BaseError
 from ....core.profile import ProfileSession
 from ....messaging.responder import BaseResponder
+<<<<<<< HEAD
 from ....messaging.valid import DID_PREFIX
+=======
+from ....protocols.coordinate_mediation.v1_0.manager import MediationManager
+>>>>>>> main
 from ....protocols.routing.v1_0.manager import RoutingManager
 from ....storage.error import StorageError, StorageNotFoundError
 from ....transport.inbound.receipt import MessageReceipt
-from ....wallet.base import BaseWallet, DIDInfo
+from ....wallet.base import BaseWallet
+from ....wallet.did_info import DIDInfo
 from ....wallet.crypto import create_keypair, seed_to_did
 from ....wallet.error import WalletNotFoundError
 from ....wallet.util import bytes_to_b58
@@ -541,7 +542,7 @@ class ConnectionManager(BaseConnectionManager):
         if request.connection.did != conn_did_doc.did:
             raise ConnectionManagerError(
                 "Connection DID does not match DIDDoc id",
-                error_code=ProblemReportReason.REQUEST_NOT_ACCEPTED,
+                error_code=ProblemReportReason.REQUEST_NOT_ACCEPTED.value,
             )
         await self.store_did_document(conn_did_doc)
 
@@ -752,7 +753,6 @@ class ConnectionManager(BaseConnectionManager):
                 at the request or response stage
 
         """
-
         connection = None
         if response._thread:
             # identify the request by the thread ID
@@ -775,7 +775,7 @@ class ConnectionManager(BaseConnectionManager):
         if not connection:
             raise ConnectionManagerError(
                 "No corresponding connection request found",
-                error_code=ProblemReportReason.RESPONSE_NOT_ACCEPTED,
+                error_code=ProblemReportReason.RESPONSE_NOT_ACCEPTED.value,
             )
 
         if ConnRecord.State.get(connection.state) not in (
@@ -1088,7 +1088,9 @@ class ConnectionManager(BaseConnectionManager):
                         connection = await ConnRecord.retrieve_by_id(
                             self._session, connection_id
                         )
+
                     targets = await self.fetch_connection_targets(connection)
+
                     await entry.set_result([row.serialize() for row in targets], 3600)
         else:
             targets = await self.fetch_connection_targets(connection)

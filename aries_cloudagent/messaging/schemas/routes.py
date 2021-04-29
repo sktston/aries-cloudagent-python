@@ -1,5 +1,7 @@
 """Credential schema admin routes."""
 
+import json
+
 from asyncio import shield
 
 from aiohttp import web
@@ -19,10 +21,19 @@ from ...admin.request_context import AdminRequestContext
 from ...indy.issuer import IndyIssuer, IndyIssuerError
 from ...ledger.base import BaseLedger
 from ...ledger.error import LedgerError
+from ...protocols.endorse_transaction.v1_0.manager import TransactionManager
+from ...protocols.endorse_transaction.v1_0.models.transaction_record import (
+    TransactionRecordSchema,
+)
 from ...storage.base import BaseStorage
 from ...storage.error import StorageError
+<<<<<<< HEAD
+=======
+
+>>>>>>> main
 from ..models.openapi import OpenAPISchema
 from ..valid import B58, NATURAL_NUM, INDY_SCHEMA_ID, INDY_VERSION
+
 from .util import SchemaQueryStringSchema, SCHEMA_SENT_RECORD_TYPE, SCHEMA_TAGS
 
 from ...protocols.endorse_transaction.v1_0.manager import TransactionManager
@@ -49,13 +60,28 @@ class SchemaSendRequestSchema(OpenAPISchema):
     )
 
 
-class SchemaSendResultsSchema(OpenAPISchema):
-    """Results schema for schema send request."""
+class SchemaSendResultSchema(OpenAPISchema):
+    """Result schema content for schema send request with auto-endorse."""
 
     schema_id = fields.Str(
         description="Schema identifier", required=True, **INDY_SCHEMA_ID
     )
     schema = fields.Dict(description="Schema result", required=True)
+
+
+class TxnOrSchemaSendResultSchema(OpenAPISchema):
+    """Result schema for schema send request."""
+
+    sent = fields.Nested(
+        SchemaSendResultSchema(),
+        required=False,
+        description="Content sent",
+    )
+    txn = fields.Nested(
+        TransactionRecordSchema(),
+        required=False,
+        description="Schema transaction to endorse",
+    )
 
 
 class SchemaSchema(OpenAPISchema):
@@ -79,14 +105,14 @@ class SchemaSchema(OpenAPISchema):
     seqNo = fields.Int(description="Schema sequence number", strict=True, **NATURAL_NUM)
 
 
-class SchemaGetResultsSchema(OpenAPISchema):
-    """Results schema for schema get request."""
+class SchemaGetResultSchema(OpenAPISchema):
+    """Result schema for schema get request."""
 
     schema = fields.Nested(SchemaSchema())
 
 
-class SchemasCreatedResultsSchema(OpenAPISchema):
-    """Results schema for a schemas-created request."""
+class SchemasCreatedResultSchema(OpenAPISchema):
+    """Result schema for a schemas-created request."""
 
     schema_ids = fields.List(
         fields.Str(description="Schema identifiers", **INDY_SCHEMA_ID)
@@ -126,7 +152,11 @@ class EndorserDIDOptionSchema(OpenAPISchema):
 @request_schema(SchemaSendRequestSchema())
 @querystring_schema(AutoEndorseOptionSchema())
 @querystring_schema(EndorserDIDOptionSchema())
+<<<<<<< HEAD
 @response_schema(SchemaSendResultsSchema(), 200, description="")
+=======
+@response_schema(TxnOrSchemaSendResultSchema(), 200, description="")
+>>>>>>> main
 async def schemas_send_schema(request: web.BaseRequest):
     """
     Request handler for sending a credential offer.
@@ -174,7 +204,13 @@ async def schemas_send_schema(request: web.BaseRequest):
             raise web.HTTPBadRequest(reason=err.roll_up) from err
 
     if auto_endorse:
+<<<<<<< HEAD
         return web.json_response({"schema_id": schema_id, "schema": schema_def})
+=======
+        return web.json_response(
+            {"sent": {"schema_id": schema_id, "schema": schema_def}}
+        )
+>>>>>>> main
     else:
         session = await context.session()
 
@@ -187,7 +223,11 @@ async def schemas_send_schema(request: web.BaseRequest):
         except StorageError as err:
             raise web.HTTPBadRequest(reason=err.roll_up) from err
 
+<<<<<<< HEAD
         return web.json_response(transaction.serialize())
+=======
+        return web.json_response({"txn": transaction.serialize()})
+>>>>>>> main
 
 
 @docs(
@@ -195,7 +235,7 @@ async def schemas_send_schema(request: web.BaseRequest):
     summary="Search for matching schema that agent originated",
 )
 @querystring_schema(SchemaQueryStringSchema())
-@response_schema(SchemasCreatedResultsSchema(), 200, description="")
+@response_schema(SchemasCreatedResultSchema(), 200, description="")
 async def schemas_created(request: web.BaseRequest):
     """
     Request handler for retrieving schemas that current agent created.
@@ -223,7 +263,7 @@ async def schemas_created(request: web.BaseRequest):
 
 @docs(tags=["schema"], summary="Gets a schema from the ledger")
 @match_info_schema(SchemaIdMatchInfoSchema())
-@response_schema(SchemaGetResultsSchema(), 200, description="")
+@response_schema(SchemaGetResultSchema(), 200, description="")
 async def schemas_get_schema(request: web.BaseRequest):
     """
     Request handler for sending a credential offer.

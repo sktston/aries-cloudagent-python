@@ -514,7 +514,12 @@ class V20PresManager:
 
                 if not any(r.items() <= criteria.items() for r in req_restrictions):
                     raise V20PresManagerError(
+<<<<<<< HEAD
                         f"Presentation {name}={proof_value} not in proposal value(s)"
+=======
+                        f"Presented attribute {reft} does not satisfy proof request "
+                        f"restrictions {req_restrictions}"
+>>>>>>> main
                     )
 
             # revealed attr groups
@@ -548,8 +553,13 @@ class V20PresManager:
 
                 if not any(r.items() <= criteria.items() for r in req_restrictions):
                     raise V20PresManagerError(
+<<<<<<< HEAD
                         f"Presentation attr group {proof_values} "
                         "not in proposal value(s)"
+=======
+                        f"Presented attr group {reft} does not satisfy proof request "
+                        f"restrictions {req_restrictions}"
+>>>>>>> main
                     )
 
             # predicate bounds
@@ -597,7 +607,12 @@ class V20PresManager:
 
                 if not any(r.items() <= criteria.items() for r in req_restrictions):
                     raise V20PresManagerError(
+<<<<<<< HEAD
                         f"Presentation predicate {reft} differs from proposal request"
+=======
+                        f"Presented predicate {reft} does not satisfy proof request "
+                        f"restrictions {req_restrictions}"
+>>>>>>> main
                     )
 
         proof = message.attachment(V20PresFormat.Format.INDY)

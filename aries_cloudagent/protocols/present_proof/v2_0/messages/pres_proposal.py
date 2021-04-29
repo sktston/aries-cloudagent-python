@@ -61,6 +61,7 @@ class V20PresProposal(AgentMessage):
             fmt: format of attachment in list to decode and return
 
         """
+<<<<<<< HEAD
         return (
             (
                 fmt or V20PresFormat.Format.get(self.formats[0].format)
@@ -69,6 +70,22 @@ class V20PresProposal(AgentMessage):
                 self.proposals_attach,
             )
             if self.formats
+=======
+        target_format = (
+            fmt
+            if fmt
+            else next(
+                filter(
+                    lambda ff: ff,
+                    [V20PresFormat.Format.get(f.format) for f in self.formats],
+                ),
+                None,
+            )
+        )
+        return (
+            target_format.get_attachment_data(self.formats, self.proposals_attach)
+            if target_format
+>>>>>>> main
             else None
         )
 

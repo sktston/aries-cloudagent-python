@@ -11,6 +11,10 @@ from typing import Callable, Coroutine, Sequence, Set
 import aiohttp_cors
 import jwt
 
+<<<<<<< HEAD
+=======
+from hmac import compare_digest
+>>>>>>> main
 from aiohttp import web
 from aiohttp_apispec import (
     docs,
@@ -18,8 +22,11 @@ from aiohttp_apispec import (
     setup_aiohttp_apispec,
     validation_middleware,
 )
+<<<<<<< HEAD
 
 from elasticapm.contrib.aiohttp import ElasticAPM
+=======
+>>>>>>> main
 
 from marshmallow import fields
 
@@ -54,8 +61,23 @@ class AdminModulesSchema(OpenAPISchema):
     )
 
 
+class AdminConfigSchema(OpenAPISchema):
+    """Schema for the config endpoint."""
+
+    config = fields.Dict(description="Configuration settings")
+
+
 class AdminStatusSchema(OpenAPISchema):
     """Schema for the status endpoint."""
+
+    version = fields.Str(description="Version code")
+    label = fields.Str(description="Default label", allow_none=True)
+    timing = fields.Dict(description="Timing results", required=False)
+    conductor = fields.Dict(description="Conductor statistics", required=False)
+
+
+class AdminResetSchema(OpenAPISchema):
+    """Schema for the reset endpoint."""
 
 
 class AdminStatusLivelinessSchema(OpenAPISchema):
@@ -208,6 +230,13 @@ async def debug_middleware(request: web.BaseRequest, handler: Coroutine):
     return await handler(request)
 
 
+def const_compare(string1, string2):
+    """Compare two strings in constant time."""
+    if string1 is None or string2 is None:
+        return False
+    return compare_digest(string1.encode(), string2.encode())
+
+
 class AdminServer(BaseAdminServer):
     """Admin HTTP server class."""
 
@@ -234,6 +263,7 @@ class AdminServer(BaseAdminServer):
             webhook_router: Callable for delivering webhooks
             conductor_stop: Conductor (graceful) stop for shutdown API call
             task_queue: An optional task queue for handlers
+            conductor_stats: Conductor statistics API call
         """
         self.app = None
         self.admin_api_key = context.settings.get("admin.admin_api_key")
@@ -287,7 +317,7 @@ class AdminServer(BaseAdminServer):
             @web.middleware
             async def check_token(request: web.Request, handler):
                 header_admin_api_key = request.headers.get("x-api-key")
-                valid_key = self.admin_api_key == header_admin_api_key
+                valid_key = const_compare(self.admin_api_key, header_admin_api_key)
 
                 if valid_key or is_unprotected_path(request.path):
                     return await handler(request)
@@ -560,7 +590,11 @@ class AdminServer(BaseAdminServer):
         return web.json_response({"result": plugins})
 
     @docs(tags=["server"], summary="Fetch the server configuration")
+<<<<<<< HEAD
     @response_schema(AdminStatusSchema(), 200, description="")
+=======
+    @response_schema(AdminConfigSchema(), 200, description="")
+>>>>>>> main
     async def config_handler(self, request: web.BaseRequest):
         """
         Request handler for the server configuration.
@@ -592,7 +626,11 @@ class AdminServer(BaseAdminServer):
                 config["admin.webhook_urls"][index],
             )
 
+<<<<<<< HEAD
         return web.json_response(config)
+=======
+        return web.json_response({"config": config})
+>>>>>>> main
 
     @docs(tags=["server"], summary="Fetch the server status")
     @response_schema(AdminStatusSchema(), 200, description="")
@@ -617,7 +655,7 @@ class AdminServer(BaseAdminServer):
         return web.json_response(status)
 
     @docs(tags=["server"], summary="Reset statistics")
-    @response_schema(AdminStatusSchema(), 200, description="")
+    @response_schema(AdminResetSchema(), 200, description="")
     async def status_reset_handler(self, request: web.BaseRequest):
         """
         Request handler for resetting the timing statistics.
@@ -716,7 +754,9 @@ class AdminServer(BaseAdminServer):
         else:
             header_admin_api_key = request.headers.get("x-api-key")
             # authenticated via http header?
-            queue.authenticated = header_admin_api_key == self.admin_api_key
+            queue.authenticated = const_compare(
+                header_admin_api_key, self.admin_api_key
+            )
 
         try:
             self.websocket_queues[socket_id] = queue
@@ -759,7 +799,9 @@ class AdminServer(BaseAdminServer):
                                 LOGGER.exception(
                                     "Exception in websocket receiving task:"
                                 )
-                            if self.admin_api_key and self.admin_api_key == msg_api_key:
+                            if self.admin_api_key and const_compare(
+                                self.admin_api_key, msg_api_key
+                            ):
                                 # authenticated via websocket message
                                 queue.authenticated = True
 

@@ -21,6 +21,7 @@ from ....ledger.error import LedgerError
 from ....messaging.decorators.attach_decorator import AttachDecorator
 from ....messaging.models.base import BaseModelError, OpenAPISchema
 from ....messaging.valid import (
+    ENDPOINT,
     INDY_CRED_DEF_ID,
     INDY_DID,
     INDY_SCHEMA_ID,
@@ -40,7 +41,6 @@ from ...problem_report.v1_0.message import ProblemReport
 from .manager import V20CredManager, V20CredManagerError
 from .message_types import ATTACHMENT_FORMAT, CRED_20_PROPOSAL, SPEC_URI
 from .messages.cred_format import V20CredFormat
-from .messages.cred_offer import V20CredOfferSchema
 from .messages.cred_proposal import V20CredProposal
 from .messages.inner.cred_preview import V20CredPreview, V20CredPreviewSchema
 from .models.cred_ex_record import V20CredExRecord, V20CredExRecordSchema
@@ -207,11 +207,6 @@ class V20IssueCredSchemaCore(AdminAPIMessageTracingSchema):
     comment = fields.Str(
         description="Human-readable comment", required=False, allow_none=True
     )
-    trace = fields.Bool(
-        description="Whether to trace event (default false)",
-        required=False,
-        example=False,
-    )
 
 
 class V20CredCreateSchema(V20IssueCredSchemaCore):
@@ -242,6 +237,32 @@ class V20CredProposalRequestPreviewMandSchema(V20CredProposalRequestSchemaBase):
     credential_preview = fields.Nested(V20CredPreviewSchema, required=True)
 
 
+class V20CredBoundOfferRequestSchema(OpenAPISchema):
+    """Request schema for sending bound credential offer admin message."""
+
+    filter_ = fields.Nested(
+        V20CredFilterSchema,
+        required=False,
+        data_key="filter",
+        description="Credential specification criteria by format",
+    )
+    counter_preview = fields.Nested(
+        V20CredPreviewSchema,
+        required=False,
+        description="Optional content for counter-proposal",
+    )
+
+    @validates_schema
+    def validate_fields(self, data, **kwargs):
+        """Validate schema fields: need both filter and counter_preview or neither."""
+
+        if ("filter_" in data) ^ ("counter_preview" in data):
+            raise ValidationError(
+                f"V20CredBoundOfferRequestSchema\n{data}\nrequires "
+                "both filter and counter_preview or neither"
+            )
+
+
 class V20CredOfferRequestSchema(V20IssueCredSchemaCore):
     """Request schema for sending credential offer admin message."""
 
@@ -258,6 +279,19 @@ class V20CredOfferRequestSchema(V20IssueCredSchemaCore):
         required=False,
     )
     credential_preview = fields.Nested(V20CredPreviewSchema, required=True)
+
+
+class V20CreateFreeOfferResultSchema(OpenAPISchema):
+    """Result schema for creating free offer."""
+
+    response = fields.Nested(
+        V20CredExRecord(),
+        description="Credential exchange record",
+    )
+    oob_url = fields.Str(
+        description="Out-of-band URL",
+        **ENDPOINT,
+    )
 
 
 class V20CredIssueRequestSchema(OpenAPISchema):
@@ -293,6 +327,7 @@ class V20CredExIdMatchInfoSchema(OpenAPISchema):
 def _formats_filters(filt_spec: Mapping) -> Mapping:
     """Break out formats and filters for v2.0 cred proposal messages."""
 
+<<<<<<< HEAD
     return {
         "formats": [
             V20CredFormat(
@@ -306,6 +341,25 @@ def _formats_filters(filt_spec: Mapping) -> Mapping:
             for (fmt_api, filt_by_fmt) in filt_spec.items()
         ],
     }
+=======
+    return (
+        {
+            "formats": [
+                V20CredFormat(
+                    attach_id=fmt_api,
+                    format_=ATTACHMENT_FORMAT[CRED_20_PROPOSAL][fmt_api],
+                )
+                for fmt_api in filt_spec
+            ],
+            "filters_attach": [
+                AttachDecorator.data_base64(filt_by_fmt, ident=fmt_api)
+                for (fmt_api, filt_by_fmt) in filt_spec.items()
+            ],
+        }
+        if filt_spec
+        else {}
+    )
+>>>>>>> main
 
 
 @docs(
@@ -713,7 +767,7 @@ async def _create_free_offer(
     summary="Create a credential offer, independent of any proposal",
 )
 @request_schema(V20CredOfferRequestSchema())
-@response_schema(V20CredOfferSchema(), 200, description="")
+@response_schema(V20CreateFreeOfferResultSchema(), 200, description="")
 async def credential_exchange_create_free_offer(request: web.BaseRequest):
     """
     Request handler for creating free credential offer.
@@ -898,6 +952,7 @@ async def credential_exchange_send_free_offer(request: web.BaseRequest):
     summary="Send holder a credential offer in reference to a proposal with preview",
 )
 @match_info_schema(V20CredExIdMatchInfoSchema())
+@request_schema(V20CredBoundOfferRequestSchema())
 @response_schema(V20CredExRecordSchema(), 200, description="")
 async def credential_exchange_send_bound_offer(request: web.BaseRequest):
     """
@@ -917,6 +972,10 @@ async def credential_exchange_send_bound_offer(request: web.BaseRequest):
 
     context: AdminRequestContext = request["context"]
     outbound_handler = request["outbound_message_router"]
+
+    body = await request.json()
+    filt_spec = body.get("filter")
+    preview_spec = body.get("counter_preview")
 
     cred_ex_id = request.match_info["cred_ex_id"]
     cred_ex_record = None
@@ -948,6 +1007,13 @@ async def credential_exchange_send_bound_offer(request: web.BaseRequest):
         cred_manager = V20CredManager(context.profile)
         (cred_ex_record, cred_offer_message) = await cred_manager.create_offer(
             cred_ex_record,
+            counter_proposal=V20CredProposal(
+                comment=None,
+                credential_preview=(V20CredPreview.deserialize(preview_spec)),
+                **_formats_filters(filt_spec),
+            )
+            if preview_spec
+            else None,
             comment=None,
         )
 
