@@ -35,7 +35,7 @@ class IndyDIDResolver(BaseDIDResolver):
     @property
     def supported_methods(self) -> Sequence[str]:
         """Return supported methods of Indy DID Resolver."""
-        return ["sov"]
+        return ["ssw"]
 
     async def _resolve(self, profile: Profile, did: str) -> dict:
         """Resolve an indy DID."""

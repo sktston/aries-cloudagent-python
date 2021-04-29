@@ -13,6 +13,7 @@ from pydid.doc.verification_method import VerificationMethod
 
 from ..core.error import BaseError
 from ..core.profile import ProfileSession
+from ..messaging.valid import DID_PREFIX
 from ..protocols.connections.v1_0.messages.connection_invitation import (
     ConnectionInvitation,
 )
@@ -218,8 +219,8 @@ class BaseConnectionManager:
         """
         if not did.startswith("did:"):
             # DID is bare indy "nym"
-            # prefix with did:sov: for backwards compatibility
-            did = f"did:sov:{did}"
+            # prefix with did:ssw: for backwards compatibility
+            did = f"{DID_PREFIX}:{did}"
 
         resolver = self._session.inject(DIDResolver)
         try:
