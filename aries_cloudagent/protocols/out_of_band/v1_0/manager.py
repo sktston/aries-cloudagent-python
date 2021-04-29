@@ -18,7 +18,6 @@ from ....core.profile import ProfileSession
 from ....indy.holder import IndyHolder
 from ....messaging.responder import BaseResponder
 from ....messaging.decorators.attach_decorator import AttachDecorator
-
 from ....multitenant.manager import MultitenantManager
 from ....storage.error import StorageNotFoundError
 from ....transport.inbound.receipt import MessageReceipt

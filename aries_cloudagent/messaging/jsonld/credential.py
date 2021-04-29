@@ -9,7 +9,6 @@ from ...wallet.util import (
     bytes_to_b64,
     naked_to_did_key,
     str_to_b64,
-    naked_to_did_key,
 )
 from .create_verify_data import create_verify_data
 from .error import BadJWSHeaderError

@@ -12,7 +12,6 @@ from aiohttp_apispec import (
     request_schema,
     response_schema,
 )
-import json
 
 from marshmallow import fields
 from marshmallow.validate import Regexp
@@ -32,8 +31,6 @@ from ..models.openapi import OpenAPISchema
 from ..valid import B58, NATURAL_NUM, INDY_SCHEMA_ID, INDY_VERSION
 
 from .util import SchemaQueryStringSchema, SCHEMA_SENT_RECORD_TYPE, SCHEMA_TAGS
-
-from ...protocols.endorse_transaction.v1_0.manager import TransactionManager
 
 
 class SchemaSendRequestSchema(OpenAPISchema):

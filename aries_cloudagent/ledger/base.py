@@ -3,7 +3,6 @@
 import re
 
 from abc import ABC, abstractmethod, ABCMeta
-from collections import namedtuple
 from enum import Enum
 from typing import Sequence, Tuple, Union
 
@@ -12,10 +11,6 @@ from ..utils import sentinel
 from ..wallet.did_info import DIDInfo
 
 from .endpoint_type import EndpointType
-
-
-# TODO duplicated from ..wallet.base due to recursive import
-DIDInfo = namedtuple("DIDInfo", "did verkey metadata")
 
 
 class BaseLedger(ABC, metaclass=ABCMeta):

@@ -12,7 +12,6 @@ from aiohttp_apispec import (
     request_schema,
     response_schema,
 )
-import json
 
 from marshmallow import fields
 
@@ -35,8 +34,6 @@ from ..valid import INDY_CRED_DEF_ID, INDY_REV_REG_SIZE, INDY_SCHEMA_ID, INDY_VE
 
 
 from .util import CredDefQueryStringSchema, CRED_DEF_TAGS, CRED_DEF_SENT_RECORD_TYPE
-
-from ...protocols.endorse_transaction.v1_0.manager import TransactionManager
 
 
 class CredentialDefinitionSendRequestSchema(OpenAPISchema):
