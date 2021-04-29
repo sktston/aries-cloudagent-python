@@ -156,17 +156,10 @@ class LoggingConfigurator:
 
         # Title
         banner.print_title(agent_label or "ACA")
-<<<<<<< HEAD
 
         banner.print_spacer()
         banner.print_spacer()
 
-=======
-
-        banner.print_spacer()
-        banner.print_spacer()
-
->>>>>>> main
         # Inbound transports
         banner.print_subtitle("Inbound Transports")
         banner.print_spacer()

@@ -62,11 +62,7 @@ class TestRedisOutboundQueue(AsyncTestCase):
                 endpoint=ENDPOINT,
             )
         message = await self.receive_message()
-<<<<<<< HEAD
-        payload = msgpack.unpackb(message).get(b"payload")
-=======
         payload = msgpack.unpackb(message).get("payload")
->>>>>>> main
         self.assertEqual(payload, transmitted_str.encode())
 
     async def test_enqueue_message_bytes(self):
@@ -77,11 +73,7 @@ class TestRedisOutboundQueue(AsyncTestCase):
                 endpoint=ENDPOINT,
             )
         message = await self.receive_message()
-<<<<<<< HEAD
-        payload = msgpack.unpackb(message).get(b"payload")
-=======
         payload = msgpack.unpackb(message).get("payload")
->>>>>>> main
         self.assertEqual(payload, transmitted_bytes)
 
     async def test_redis_error_handled(self):

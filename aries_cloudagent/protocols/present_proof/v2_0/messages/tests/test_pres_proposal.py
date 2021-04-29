@@ -138,8 +138,6 @@ class TestV20PresProposal(TestCase):
             pres_proposal_dict["formats"] = []
             with pytest.raises(BaseModelError):
                 V20PresProposal.deserialize(pres_proposal_dict)  # length mismatch
-<<<<<<< HEAD
-=======
 
             pres_proposal.formats.append(  # unknown format: no validation
                 V20PresFormat(
@@ -168,4 +166,3 @@ class TestV20PresProposal(TestCase):
             ],
         )
         assert x_pres_proposal.attachment() is None
->>>>>>> main

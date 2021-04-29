@@ -64,8 +64,6 @@ class AssignTransactionJobsSchema(OpenAPISchema):
     )
 
 
-<<<<<<< HEAD
-=======
 class TransactionJobsSchema(OpenAPISchema):
     """Transaction jobs metadata on connection record."""
 
@@ -85,7 +83,6 @@ class TransactionJobsSchema(OpenAPISchema):
     )
 
 
->>>>>>> main
 class ConnIdMatchInfoSchema(OpenAPISchema):
     """Path parameters and validators for request taking connection id."""
 
@@ -550,10 +547,7 @@ async def transaction_resend(request: web.BaseRequest):
 )
 @querystring_schema(AssignTransactionJobsSchema())
 @match_info_schema(ConnIdMatchInfoSchema())
-<<<<<<< HEAD
-=======
 @response_schema(TransactionJobsSchema(), 200)
->>>>>>> main
 async def set_transaction_jobs(request: web.BaseRequest):
     """
     Request handler for assigning transaction jobs.

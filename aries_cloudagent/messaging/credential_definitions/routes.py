@@ -160,11 +160,7 @@ class EndorserDIDOptionSchema(OpenAPISchema):
 @request_schema(CredentialDefinitionSendRequestSchema())
 @querystring_schema(AutoEndorseOptionSchema())
 @querystring_schema(EndorserDIDOptionSchema())
-<<<<<<< HEAD
-@response_schema(CredentialDefinitionSendResultsSchema(), 200, description="")
-=======
 @response_schema(TxnOrCredentialDefinitionSendResultSchema(), 200, description="")
->>>>>>> main
 async def credential_definitions_send_credential_definition(request: web.BaseRequest):
     """
     Request handler for sending a credential definition to the ledger.
@@ -266,11 +262,7 @@ async def credential_definitions_send_credential_definition(request: web.BaseReq
             raise web.HTTPBadRequest(reason=e.message) from e
 
     if auto_endorse:
-<<<<<<< HEAD
-        return web.json_response({"credential_definition_id": cred_def_id})
-=======
         return web.json_response({"sent": {"credential_definition_id": cred_def_id}})
->>>>>>> main
 
     else:
         session = await context.session()
@@ -284,11 +276,7 @@ async def credential_definitions_send_credential_definition(request: web.BaseReq
         except StorageError as err:
             raise web.HTTPBadRequest(reason=err.roll_up) from err
 
-<<<<<<< HEAD
-        return web.json_response(transaction.serialize())
-=======
         return web.json_response({"txn": transaction.serialize()})
->>>>>>> main
 
 
 @docs(

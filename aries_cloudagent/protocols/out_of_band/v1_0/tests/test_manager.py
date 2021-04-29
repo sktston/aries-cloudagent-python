@@ -1941,10 +1941,6 @@ class TestOOBManager(AsyncTestCase, TestConfig):
             "create_presentation",
             autospec=True,
         ) as pres_mgr_create_presentation:
-<<<<<<< HEAD
-            mock_ledger_get_key_for_did.return_value = TestConfig.test_verkey
-=======
->>>>>>> main
             oob_mgr_find_existing_conn.return_value = test_exist_conn
             pres_mgr_receive_request.return_value = exchange_rec
             pres_mgr_create_presentation.return_value = (
@@ -2066,10 +2062,6 @@ class TestOOBManager(AsyncTestCase, TestConfig):
             "deserialize",
             autospec=True,
         ) as present_proposal_deserialize:
-<<<<<<< HEAD
-            mock_ledger_get_key_for_did.return_value = TestConfig.test_verkey
-=======
->>>>>>> main
             oob_mgr_find_existing_conn.return_value = test_exist_conn
             pres_mgr_receive_request.return_value = exchange_rec
             pres_mgr_create_presentation.return_value = (
@@ -2124,11 +2116,6 @@ class TestOOBManager(AsyncTestCase, TestConfig):
         px2_rec = test_module.V20PresExRecord()
 
         with async_mock.patch.object(
-<<<<<<< HEAD
-            self.ledger, "get_key_for_did", async_mock.CoroutineMock()
-        ) as mock_ledger_get_key_for_did, async_mock.patch.object(
-=======
->>>>>>> main
             DIDXManager, "receive_invitation", autospec=True
         ) as didx_mgr_receive_invitation, async_mock.patch.object(
             V20PresManager, "receive_pres_request", autospec=True
@@ -2164,10 +2151,6 @@ class TestOOBManager(AsyncTestCase, TestConfig):
             "receive_problem_report",
             autospec=True,
         ) as oob_mgr_receive_problem_report:
-<<<<<<< HEAD
-            mock_ledger_get_key_for_did.return_value = TestConfig.test_verkey
-=======
->>>>>>> main
             oob_mgr_find_existing_conn.return_value = test_exist_conn
             pres_mgr_receive_pres_req.return_value = px2_rec
 
@@ -2215,11 +2198,6 @@ class TestOOBManager(AsyncTestCase, TestConfig):
         )
 
         with async_mock.patch.object(
-<<<<<<< HEAD
-            self.ledger, "get_key_for_did", async_mock.CoroutineMock()
-        ) as mock_ledger_get_key_for_did, async_mock.patch.object(
-=======
->>>>>>> main
             DIDXManager,
             "receive_invitation",
             autospec=True,
@@ -2263,10 +2241,6 @@ class TestOOBManager(AsyncTestCase, TestConfig):
             "create_pres",
             autospec=True,
         ) as pres_mgr_create_pres:
-<<<<<<< HEAD
-            mock_ledger_get_key_for_did.return_value = TestConfig.test_verkey
-=======
->>>>>>> main
             oob_mgr_find_existing_conn.return_value = test_exist_conn
             pres_mgr_receive_pres_req.return_value = px2_rec
             pres_mgr_create_pres.return_value = (
@@ -2395,10 +2369,6 @@ class TestOOBManager(AsyncTestCase, TestConfig):
             "create_pres",
             autospec=True,
         ) as pres_mgr_create_pres:
-<<<<<<< HEAD
-            mock_ledger_get_key_for_did.return_value = TestConfig.test_verkey
-=======
->>>>>>> main
             oob_mgr_find_existing_conn.return_value = test_exist_conn
             pres_mgr_receive_pres_req.return_value = px2_rec
             pres_mgr_create_pres.return_value = (
@@ -2521,10 +2491,6 @@ class TestOOBManager(AsyncTestCase, TestConfig):
             "create_presentation",
             autospec=True,
         ) as pres_mgr_create_presentation:
-<<<<<<< HEAD
-            mock_ledger_get_key_for_did.return_value = TestConfig.test_verkey
-=======
->>>>>>> main
             oob_mgr_find_existing_conn.return_value = test_exist_conn
             pres_mgr_create_presentation.return_value = (
                 exchange_rec,

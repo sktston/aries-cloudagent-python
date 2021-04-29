@@ -1681,11 +1681,7 @@ PRES = V20Pres(
 )
 
 
-<<<<<<< HEAD
-class TestPresentation(TestCase):
-=======
 class TestV20Pres(TestCase):
->>>>>>> main
     """Presentation tests."""
 
     def test_init_type(self):
@@ -1695,8 +1691,6 @@ class TestV20Pres(TestCase):
         assert PRES.attachment(V20PresFormat.Format.INDY) == INDY_PROOF
         assert PRES._type == DIDCommPrefix.qualify_current(PRES_20)
 
-<<<<<<< HEAD
-=======
     def test_attachment_no_target_format(self):
         """Test attachment behaviour for only unknown formats."""
 
@@ -1709,7 +1703,6 @@ class TestV20Pres(TestCase):
         )
         assert x_pres.attachment() is None
 
->>>>>>> main
     def test_serde(self):
         """Test deserialization."""
         pres_dict = PRES.serialize()
@@ -1733,8 +1726,6 @@ class TestV20Pres(TestCase):
         )  # more attachments than formats
         with self.assertRaises(BaseModelError):
             V20Pres.deserialize(pres_dict)
-<<<<<<< HEAD
-=======
 
         pres_obj.formats.append(  # unknown format: no validation
             V20PresFormat(
@@ -1751,4 +1742,3 @@ class TestV20Pres(TestCase):
             }
         )
         V20Pres.deserialize(pres_dict)
->>>>>>> main

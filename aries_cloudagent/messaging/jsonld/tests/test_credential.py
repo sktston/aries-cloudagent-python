@@ -1,12 +1,3 @@
-<<<<<<< HEAD
-import json
-
-from asynctest import mock as async_mock, TestCase as AsyncTestCase
-
-from .. import credential as test_module
-
-TEST_VERKEY = "5yKdnU7ToTjAoRNDzfuzVTfWBH38qyhE1b9xh4v8JaWF"
-=======
 """Test json-ld credential."""
 
 import asyncio
@@ -34,7 +25,6 @@ from . import (
     TEST_VERIFY_OBJS,
     TEST_VERKEY,
 )
->>>>>>> main
 
 
 class TestCredential(AsyncTestCase):
@@ -60,8 +50,6 @@ class TestCredential(AsyncTestCase):
                     )
                 )
             )
-<<<<<<< HEAD
-=======
 
 
 @pytest.fixture(scope="module")
@@ -157,4 +145,3 @@ async def test_Invalid_JWS_header(mock_session):
 )
 def test_did_key(verkey):
     assert did_key(verkey).startswith("did:key:z")
->>>>>>> main

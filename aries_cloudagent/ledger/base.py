@@ -9,10 +9,7 @@ from typing import Sequence, Tuple, Union
 
 from ..indy.issuer import IndyIssuer
 from ..utils import sentinel
-<<<<<<< HEAD
-=======
 from ..wallet.did_info import DIDInfo
->>>>>>> main
 
 from .endpoint_type import EndpointType
 

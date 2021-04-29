@@ -111,11 +111,7 @@ class DefaultContextBuilder(ContextBuilder):
             "aries_cloudagent.messaging.credential_definitions"
         )
         plugin_registry.register_plugin("aries_cloudagent.messaging.schemas")
-<<<<<<< HEAD
-        # plugin_registry.register_plugin("aries_cloudagent.messaging.jsonld")
-=======
         plugin_registry.register_plugin("aries_cloudagent.messaging.jsonld")
->>>>>>> main
         plugin_registry.register_plugin("aries_cloudagent.revocation")
         plugin_registry.register_plugin("aries_cloudagent.resolver")
         plugin_registry.register_plugin("aries_cloudagent.wallet")

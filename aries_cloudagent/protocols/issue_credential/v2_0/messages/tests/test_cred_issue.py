@@ -99,9 +99,6 @@ class TestV20CredIssue(AsyncTestCase):
         assert TestV20CredIssue.CRED_ISSUE.attachment() == TestV20CredIssue.INDY_CRED
         assert TestV20CredIssue.CRED_ISSUE._type == DIDCommPrefix.qualify_current(
             CRED_20_ISSUE
-<<<<<<< HEAD
-        )
-=======
         )
 
     async def test_attachment_no_target_format(self):
@@ -117,7 +114,6 @@ class TestV20CredIssue(AsyncTestCase):
             ],
         )
         assert x_cred.attachment() is None
->>>>>>> main
 
     async def test_deserialize(self):
         """Test deserialization."""
@@ -136,19 +132,13 @@ class TestV20CredIssue(AsyncTestCase):
 
         obj["credentials~attach"].append(  # more attachments than formats
             {
-<<<<<<< HEAD
-                "@id": "def",
-=======
                 "@id": "not_indy",
->>>>>>> main
                 "mime-type": "application/json",
                 "data": {"base64": "eyJub3QiOiAiaW5keSJ9"},
             }
         )
         with self.assertRaises(BaseModelError):
             V20CredIssue.deserialize(obj)
-<<<<<<< HEAD
-=======
 
         cred_issue.formats.append(  # unknown format: no validation
             V20CredFormat(
@@ -165,7 +155,6 @@ class TestV20CredIssue(AsyncTestCase):
             }
         )
         V20CredIssue.deserialize(obj)
->>>>>>> main
 
     async def test_serialize(self):
         """Test serialization."""

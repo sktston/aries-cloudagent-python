@@ -279,11 +279,7 @@ class TestCredentialDefinitionRoutes(AsyncTestCase):
                 )
             )
             assert result == mock_response.return_value
-<<<<<<< HEAD
-            mock_response.assert_called_once_with({"...": "..."})
-=======
             mock_response.assert_called_once_with({"txn": {"...": "..."}})
->>>>>>> main
 
     async def test_send_credential_definition_no_auto_endorse_storage_x(self):
         self.request.json = async_mock.CoroutineMock(

@@ -1,10 +1,6 @@
 Feature: RFC 0586 Aries sign (endorse) transactions functions
 
-<<<<<<< HEAD
-   @T001-RFC0586 @P1 @critical @AcceptanceTest @RFC0586
-=======
    @T001-RFC0586 @GHA
->>>>>>> main
    Scenario Outline: endorse a transaction and write to the ledger
       Given we have "2" agents
          | name  | role     | capabilities        |
@@ -27,8 +23,6 @@ Feature: RFC 0586 Aries sign (endorse) transactions functions
          | --did-exchange           | --did-exchange         | driverslicense |
          | --mediation              | --mediation            | driverslicense |
          | --multitenant            | --multitenant          | driverslicense |
-<<<<<<< HEAD
-=======
 
 
    @T001.1-RFC0586
@@ -51,4 +45,3 @@ Feature: RFC 0586 Aries sign (endorse) transactions functions
       Examples:
          | Acme_capabilities          | Bob_capabilities             | Schema_name    |
          | --mediation --multitenant  | --mediation --multitenant    | driverslicense |
->>>>>>> main

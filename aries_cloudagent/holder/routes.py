@@ -269,11 +269,7 @@ async def credentials_attr_mime_types_get(request: web.BaseRequest):
     credential_id = request.match_info["credential_id"]
 
     holder = session.inject(IndyHolder)
-<<<<<<< HEAD
-    return web.json_response(await holder.get_mime_type(credential_id))
-=======
     return web.json_response({"results": await holder.get_mime_type(credential_id)})
->>>>>>> main
 
 
 @docs(tags=["credentials"], summary="Remove credential from wallet by id")

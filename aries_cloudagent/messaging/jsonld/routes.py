@@ -14,13 +14,8 @@ from ...wallet.error import WalletError
 from ..models.openapi import OpenAPISchema
 from .credential import sign_credential, verify_credential
 from .error import (
-<<<<<<< HEAD
-    BadJWSHeaderError,
-    DroppedAttributeError,
-=======
     BaseJSONLDMessagingError,
     InvalidVerificationMethod,
->>>>>>> main
     MissingVerificationMethodError,
 )
 
@@ -76,16 +71,8 @@ async def sign(request: web.BaseRequest):
     try:
         context: AdminRequestContext = request["context"]
         async with context.session() as session:
-<<<<<<< HEAD
-            wallet = session.inject(BaseWallet, required=False)
-            if not wallet:
-                raise web.HTTPForbidden(reason="No wallet available")
-            document_with_proof = await sign_credential(
-                credential, signature_options, verkey, wallet
-=======
             doc_with_proof = await sign_credential(
                 session, doc.get("credential"), doc.get("options"), body.get("verkey")
->>>>>>> main
             )
             response["signed_doc"] = doc_with_proof
     except (BaseJSONLDMessagingError) as err:
@@ -94,12 +81,6 @@ async def sign(request: web.BaseRequest):
         raise web.HTTPForbidden(reason="No wallet available")
     return web.json_response(response)
 
-<<<<<<< HEAD
-        response["signed_doc"] = document_with_proof
-    except (DroppedAttributeError, MissingVerificationMethodError) as err:
-        response["error"] = str(err)
-=======
->>>>>>> main
 
 class DocSchema(OpenAPISchema):
     """Verifiable doc schema."""
@@ -158,16 +139,6 @@ async def verify(request: web.BaseRequest):
         verkey = body.get("verkey")
         doc = body.get("doc")
         async with context.session() as session:
-<<<<<<< HEAD
-            wallet = session.inject(BaseWallet, required=False)
-            if not wallet:
-                raise web.HTTPForbidden(reason="No wallet available")
-            valid = await verify_credential(doc, verkey, wallet)
-
-        response["valid"] = valid
-    except (BadJWSHeaderError, DroppedAttributeError) as e:
-        response["error"] = str(e)
-=======
             if verkey is None:
                 resolver = session.inject(DIDResolver)
                 ver_meth_expanded = await resolver.dereference(
@@ -179,7 +150,6 @@ async def verify(request: web.BaseRequest):
                         f"Verification method "
                         f"{doc['proof']['verificationMethod']} not found."
                     )
->>>>>>> main
 
                 if not isinstance(ver_meth_expanded, VerificationMethod):
                     raise InvalidVerificationMethod(

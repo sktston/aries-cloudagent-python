@@ -1,15 +1,4 @@
 import json
-<<<<<<< HEAD
-
-from copy import deepcopy
-
-from asynctest import mock as async_mock, TestCase as AsyncTestCase
-from pyld import jsonld
-
-from ....admin.request_context import AdminRequestContext
-from ....wallet.base import BaseWallet
-
-=======
 from copy import deepcopy
 from pydid.doc.service import Service
 
@@ -28,7 +17,6 @@ from ....resolver.did_resolver import DIDResolver
 from ....resolver.tests import DOC
 from ....wallet.base import BaseWallet
 from ....wallet.error import WalletError
->>>>>>> main
 from .. import routes as test_module
 from ..error import (
     BadJWSHeaderError,
@@ -339,10 +327,6 @@ class TestJSONLDRoutes(AsyncTestCase):
             result = await test_module.verify(self.request)
             assert "error" in json.loads(result)
 
-<<<<<<< HEAD
-        print("\n>> START X-ATTR-CRED-SUBJECT")
-=======
->>>>>>> main
         with async_mock.patch.object(
             jsonld, "compact", async_mock.MagicMock()
         ) as mock_compact, async_mock.patch.object(
@@ -481,8 +465,4 @@ class TestJSONLDRoutes(AsyncTestCase):
         mock_app.add_routes = async_mock.MagicMock()
 
         await test_module.register(mock_app)
-<<<<<<< HEAD
-        assert mock_app.add_routes.call_count == 2
-=======
         mock_app.add_routes.assert_called_once()
->>>>>>> main

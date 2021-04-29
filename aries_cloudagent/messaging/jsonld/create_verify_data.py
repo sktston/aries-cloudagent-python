@@ -11,15 +11,11 @@ import hashlib
 
 from pyld import jsonld
 
-<<<<<<< HEAD
-from .error import DroppedAttributeError, MissingVerificationMethodError
-=======
 from .error import (
     DroppedAttributeError,
     MissingVerificationMethodError,
     SignatureTypeError,
 )
->>>>>>> main
 
 
 def _canonize(data):
@@ -46,18 +42,6 @@ def _canonize_document(doc):
     return _canonize(_doc)
 
 
-<<<<<<< HEAD
-def create_verify_data(data, signature_options):
-    """Encapsulate the process of constructing the string used during sign and verify."""
-
-    if "creator" in signature_options:
-        signature_options["verificationMethod"] = signature_options["creator"]
-
-    if not signature_options.get("verificationMethod"):
-        raise MissingVerificationMethodError(
-            "signature_options.verificationMethod is required"
-        )
-=======
 def _created_at():
     """Creation Timestamp."""
 
@@ -71,7 +55,6 @@ def create_verify_data(data, signature_options):
     type_ = signature_options.get("type", "Ed25519Signature2018")
     if type_ and type_ != "Ed25519Signature2018":
         raise SignatureTypeError(f"invalid signature type {type_}.")
->>>>>>> main
 
     signature_options["verificationMethod"] = signature_options.get(
         "creator", signature_options.get("verificationMethod")
@@ -89,23 +72,6 @@ def create_verify_data(data, signature_options):
     )
 
     # Detect any dropped attributes during the expand/contract step.
-<<<<<<< HEAD
-    if len(data) != len(framed):
-        raise DroppedAttributeError("Extra Attribute Detected")
-    if (
-        "proof" in data
-        and "proof" in framed
-        and len(data["proof"]) != len(framed["proof"])
-    ):
-        raise DroppedAttributeError("Extra Attribute Detected")
-    if (
-        "credentialSubject" in data
-        and "https://www.w3.org/2018/credentials#credentialSubject" in framed
-        and len(data["credentialSubject"])
-        != len(framed["https://www.w3.org/2018/credentials#credentialSubject"])
-    ):
-        raise DroppedAttributeError("Extra Attribute Detected")
-=======
     if len(data) > len(framed):
         # > check indicates dropped attrs < is a different error
         # attempt to collect error report data
@@ -132,7 +98,6 @@ def create_verify_data(data, signature_options):
                 f"in {mapping[0]}, {dropped} attributes dropped. "
                 "Provide definitions in context to correct."
             )
->>>>>>> main
 
     canonized_signature_options = _canonize_signature_options(signature_options)
     hash_of_canonized_signature_options = _sha256(canonized_signature_options)

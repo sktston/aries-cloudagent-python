@@ -11,10 +11,7 @@ from typing import Callable, Coroutine, Sequence, Set
 import aiohttp_cors
 import jwt
 
-<<<<<<< HEAD
-=======
 from hmac import compare_digest
->>>>>>> main
 from aiohttp import web
 from aiohttp_apispec import (
     docs,
@@ -22,11 +19,8 @@ from aiohttp_apispec import (
     setup_aiohttp_apispec,
     validation_middleware,
 )
-<<<<<<< HEAD
 
 from elasticapm.contrib.aiohttp import ElasticAPM
-=======
->>>>>>> main
 
 from marshmallow import fields
 
@@ -590,11 +584,7 @@ class AdminServer(BaseAdminServer):
         return web.json_response({"result": plugins})
 
     @docs(tags=["server"], summary="Fetch the server configuration")
-<<<<<<< HEAD
-    @response_schema(AdminStatusSchema(), 200, description="")
-=======
     @response_schema(AdminConfigSchema(), 200, description="")
->>>>>>> main
     async def config_handler(self, request: web.BaseRequest):
         """
         Request handler for the server configuration.
@@ -626,11 +616,7 @@ class AdminServer(BaseAdminServer):
                 config["admin.webhook_urls"][index],
             )
 
-<<<<<<< HEAD
-        return web.json_response(config)
-=======
         return web.json_response({"config": config})
->>>>>>> main
 
     @docs(tags=["server"], summary="Fetch the server status")
     @response_schema(AdminStatusSchema(), 200, description="")

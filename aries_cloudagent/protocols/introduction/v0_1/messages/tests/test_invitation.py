@@ -23,20 +23,7 @@ class TestInvitation(AsyncTestCase):
 
         self.conn_invi_msg = ConnectionInvitation(
             label=self.label,
-<<<<<<< HEAD
-            handshake_protocols=[DIDCommPrefix.qualify_current(HSProto.RFC23.name)],
-            services=[
-                OOBService(
-                    _id="#inline",
-                    _type="did-communication",
-                    did=self.test_did,
-                    recipient_keys=[naked_to_did_key(self.key)],
-                    service_endpoint=self.endpoint_url,
-                )
-            ],
-=======
             did=self.test_did,
->>>>>>> main
         )
         self.intro_invitation = IntroInvitation(
             invitation=self.conn_invi_msg,

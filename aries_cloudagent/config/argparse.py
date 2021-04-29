@@ -733,15 +733,12 @@ class ProtocolGroup(ArgumentGroup):
                 "connection response is accepted. Some agents require this before "
                 "marking a connection as 'active'. Default: false."
             ),
-<<<<<<< HEAD
-=======
         )
         parser.add_argument(
             "--auto-accept-intro-invitation-requests",
             action="store_true",
             env_var="ACAPY_AUTO_ACCEPT_INTRO_INVITATION_REQUESTS",
             help="Automatically accept introduction invitations. Default: false.",
->>>>>>> main
         )
         parser.add_argument(
             "--invite-base-url",

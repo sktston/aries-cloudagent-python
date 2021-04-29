@@ -18,12 +18,7 @@ from ....core.profile import ProfileSession
 from ....indy.holder import IndyHolder
 from ....messaging.responder import BaseResponder
 from ....messaging.decorators.attach_decorator import AttachDecorator
-<<<<<<< HEAD
-from ....ledger.base import BaseLedger
-from ....ledger.error import LedgerError
-from ....messaging.valid import DID_PREFIX
-=======
->>>>>>> main
+
 from ....multitenant.manager import MultitenantManager
 from ....storage.error import StorageNotFoundError
 from ....transport.inbound.receipt import MessageReceipt
@@ -229,11 +224,7 @@ class OutOfBandManager(BaseConnectionManager):
                 label=my_label or self._session.settings.get("default_label"),
                 handshake_protocols=handshake_protocols,
                 requests_attach=message_attachments,
-<<<<<<< HEAD
                 services=[f"{DID_PREFIX}:{public_did.did}"],
-=======
-                services=[f"did:sov:{public_did.did}"],
->>>>>>> main
             )
             keylist_updates = await mediation_mgr.add_key(
                 public_did.verkey, keylist_updates
@@ -367,7 +358,6 @@ class OutOfBandManager(BaseConnectionManager):
     ) -> dict:
         """
         Receive an out of band invitation message.
-<<<<<<< HEAD
 
         Args:
             invi_msg: invitation message
@@ -378,21 +368,6 @@ class OutOfBandManager(BaseConnectionManager):
 
         Returns:
             ConnRecord, serialized
-
-        """
-        ledger: BaseLedger = self._session.inject(BaseLedger)
-=======
-
-        Args:
-            invi_msg: invitation message
-            use_existing_connection: whether to use existing connection if possible
-            auto_accept: whether to accept the invitation automatically
-            alias: Alias for connection record
-            mediation_id: mediation identifier
-
-        Returns:
-            ConnRecord, serialized
->>>>>>> main
 
         """
         if mediation_id:
@@ -670,7 +645,6 @@ class OutOfBandManager(BaseConnectionManager):
                         connection=conn_rec
                     ),
                 )
-<<<<<<< HEAD
         else:
             raise OutOfBandManagerError(
                 (
@@ -751,8 +725,6 @@ class OutOfBandManager(BaseConnectionManager):
                         connection=conn_rec
                     ),
                 )
-=======
->>>>>>> main
         else:
             raise OutOfBandManagerError(
                 (
@@ -760,89 +732,6 @@ class OutOfBandManager(BaseConnectionManager):
                     "respond automatically to presentation requests"
                 )
             )
-<<<<<<< HEAD
-=======
-
-    async def _process_pres_request_v2(
-        self,
-        req_attach: AttachDecorator,
-        service: ServiceMessage,
-        conn_rec: ConnRecord,
-        trace: bool,
-    ):
-        """
-        Create exchange for v2 pres request attachment, auto-present if configured.
-
-        Args:
-            req_attach: request attachment on invitation
-            service: service message from invitation
-            conn_rec: connection record
-            trace: trace setting for presentation exchange record
-        """
-        pres_mgr = V20PresManager(self._session.profile)
-        pres_request_msg = req_attach.content
-        oob_invi_service = service.serialize()
-        pres_request_msg["~service"] = {
-            "recipientKeys": oob_invi_service.get("recipientKeys"),
-            "routingKeys": oob_invi_service.get("routingKeys"),
-            "serviceEndpoint": oob_invi_service.get("serviceEndpoint"),
-        }
-        pres_ex_record = V20PresExRecord(
-            connection_id=conn_rec.connection_id,
-            thread_id=pres_request_msg["@id"],
-            initiator=V20PresExRecord.INITIATOR_EXTERNAL,
-            role=V20PresExRecord.ROLE_PROVER,
-            pres_request=pres_request_msg,
-            auto_present=self._session.context.settings.get(
-                "debug.auto_respond_presentation_request"
-            ),
-            trace=trace,
-        )
-
-        pres_ex_record = await pres_mgr.receive_pres_request(pres_ex_record)
-        if pres_ex_record.auto_present:
-            indy_proof_request = V20PresRequest.deserialize(
-                pres_request_msg
-            ).attachment(
-                V20PresFormat.Format.INDY
-            )  # assumption will change for DIF
-            try:
-                req_creds = await indy_proof_req_preview2indy_requested_creds(
-                    indy_proof_req=indy_proof_request,
-                    preview=None,
-                    holder=self._session.inject(IndyHolder),
-                )
-            except ValueError as err:
-                self._logger.warning(f"{err}")
-                raise OutOfBandManagerError(
-                    f"Cannot auto-respond to presentation request attachment: {err}"
-                )
-
-            (pres_ex_record, pres_msg) = await pres_mgr.create_pres(
-                pres_ex_record=pres_ex_record,
-                requested_credentials=req_creds,
-                comment=(
-                    "auto-presented for proof request nonce={}".format(
-                        indy_proof_request["nonce"]
-                    )
-                ),
-            )
-            responder = self._session.inject(BaseResponder, required=False)
-            if responder:
-                await responder.send(
-                    message=pres_msg,
-                    target_list=await self.fetch_connection_targets(
-                        connection=conn_rec
-                    ),
-                )
-        else:
-            raise OutOfBandManagerError(
-                (
-                    "Configuration sets auto_present false: cannot "
-                    "respond automatically to presentation requests"
-                )
-            )
->>>>>>> main
 
     async def find_existing_connection(
         self,

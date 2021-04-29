@@ -221,11 +221,7 @@ class DemoAgent:
         }
         schema_response = await self.admin_POST("/schemas", schema_body)
         log_json(json.dumps(schema_response), label="Schema:")
-<<<<<<< HEAD
-        schema_id = schema_response["schema_id"]
-=======
         schema_id = schema_response["sent"]["schema_id"]
->>>>>>> main
         log_msg("Schema ID:", schema_id)
         await asyncio.sleep(2.0)
 
@@ -551,30 +547,16 @@ class DemoAgent:
 
     async def terminate(self):
         # close session to admin api
-<<<<<<< HEAD
-        self.log("Shutting down admin api session")
         await self.client_session.close()
         # shut down web hooks first
-        self.log("Shutting down web hooks site")
-=======
-        await self.client_session.close()
-        # shut down web hooks first
->>>>>>> main
         if self.webhook_site:
             await self.webhook_site.stop()
             await asyncio.sleep(0.5)
         # now shut down the agent
-<<<<<<< HEAD
-        self.log("Shutting down agent")
-        loop = asyncio.get_event_loop()
-        if self.proc:
-            await loop.run_in_executor(None, self._terminate)
-=======
         loop = asyncio.get_event_loop()
         if self.proc:
             future = loop.run_in_executor(None, self._terminate)
             result = await asyncio.wait_for(future, 10, loop=loop)
->>>>>>> main
 
     async def listen_webhooks(self, webhook_port):
         self.webhook_port = webhook_port

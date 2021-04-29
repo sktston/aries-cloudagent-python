@@ -75,8 +75,6 @@ class TestV20CredOffer(AsyncTestCase):
         assert TestV20CredOffer.CRED_OFFER.attachment() == TestV20CredOffer.indy_offer
         assert TestV20CredOffer.CRED_OFFER._type == DIDCommPrefix.qualify_current(
             CRED_20_OFFER
-<<<<<<< HEAD
-=======
         )
 
     async def test_attachment_no_target_format(self):
@@ -90,7 +88,6 @@ class TestV20CredOffer(AsyncTestCase):
                     ident="not_indy", mapping=TestV20CredOffer.CRED_OFFER.serialize()
                 )
             ],
->>>>>>> main
         )
         assert x_cred_offer.attachment() is None
 
@@ -101,43 +98,23 @@ class TestV20CredOffer(AsyncTestCase):
         cred_offer = V20CredOffer.deserialize(obj)
         assert type(cred_offer) == V20CredOffer
 
-<<<<<<< HEAD
-    async def test_serde(self):
-        """Test de/serialization."""
-        obj = TestV20CredOffer.CRED_OFFER.serialize()
-
-        cred_offer = V20CredOffer.deserialize(obj)
-        assert type(cred_offer) == V20CredOffer
-
         obj["offers~attach"][0]["data"]["base64"] = "eyJub3QiOiAiaW5keSJ9"
         with self.assertRaises(BaseModelError):
             V20CredOffer.deserialize(obj)
 
-=======
-        obj["offers~attach"][0]["data"]["base64"] = "eyJub3QiOiAiaW5keSJ9"
-        with self.assertRaises(BaseModelError):
-            V20CredOffer.deserialize(obj)
-
->>>>>>> main
         obj["offers~attach"][0]["@id"] = "xxx"
         with self.assertRaises(BaseModelError):
             V20CredOffer.deserialize(obj)
 
         obj["offers~attach"].append(  # more attachments than formats
             {
-<<<<<<< HEAD
-                "@id": "def",
-=======
                 "@id": "not_indy",
->>>>>>> main
                 "mime-type": "application/json",
                 "data": {"base64": "eyJub3QiOiAiaW5keSJ9"},
             }
         )
         with self.assertRaises(BaseModelError):
             V20CredOffer.deserialize(obj)
-<<<<<<< HEAD
-=======
 
         cred_offer.formats.append(  # unknown format: no validation
             V20CredFormat(
@@ -154,7 +131,6 @@ class TestV20CredOffer(AsyncTestCase):
             }
         )
         V20CredOffer.deserialize(obj)
->>>>>>> main
 
 
 class TestCredentialOfferSchema(AsyncTestCase):

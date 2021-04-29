@@ -327,21 +327,6 @@ class V20CredExIdMatchInfoSchema(OpenAPISchema):
 def _formats_filters(filt_spec: Mapping) -> Mapping:
     """Break out formats and filters for v2.0 cred proposal messages."""
 
-<<<<<<< HEAD
-    return {
-        "formats": [
-            V20CredFormat(
-                attach_id=fmt_api,
-                format_=ATTACHMENT_FORMAT[CRED_20_PROPOSAL][fmt_api],
-            )
-            for fmt_api in filt_spec
-        ],
-        "filters_attach": [
-            AttachDecorator.data_base64(filt_by_fmt, ident=fmt_api)
-            for (fmt_api, filt_by_fmt) in filt_spec.items()
-        ],
-    }
-=======
     return (
         {
             "formats": [
@@ -359,7 +344,6 @@ def _formats_filters(filt_spec: Mapping) -> Mapping:
         if filt_spec
         else {}
     )
->>>>>>> main
 
 
 @docs(

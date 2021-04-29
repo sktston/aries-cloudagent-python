@@ -1,10 +1,4 @@
 import pytest
-<<<<<<< HEAD
-
-from asynctest import TestCase as AsyncTestCase
-from asynctest import mock as async_mock
-=======
->>>>>>> main
 
 from asynctest import mock as async_mock, TestCase as AsyncTestCase
 

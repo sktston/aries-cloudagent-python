@@ -5,11 +5,7 @@ from enum import Enum
 from typing import Sequence, Union
 from uuid import uuid4
 
-<<<<<<< HEAD
-from marshmallow import EXCLUDE, fields, validate
-=======
 from marshmallow import EXCLUDE, fields
->>>>>>> main
 
 from .....messaging.decorators.attach_decorator import AttachDecorator
 from .....messaging.models.base import BaseModel, BaseModelSchema
@@ -111,9 +107,5 @@ class V20PresFormatSchema(BaseModelSchema):
         allow_none=False,
         description="Attachment format specifier",
         data_key="format",
-<<<<<<< HEAD
-        validate=validate.Regexp("^(hlindy/.*@v2.0)|(dif/.*@v1.0)$"),
-=======
->>>>>>> main
         example="dif/presentation-exchange/submission@v1.0",
     )

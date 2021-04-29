@@ -27,10 +27,7 @@ from ...protocols.endorse_transaction.v1_0.models.transaction_record import (
 )
 from ...storage.base import BaseStorage
 from ...storage.error import StorageError
-<<<<<<< HEAD
-=======
 
->>>>>>> main
 from ..models.openapi import OpenAPISchema
 from ..valid import B58, NATURAL_NUM, INDY_SCHEMA_ID, INDY_VERSION
 
@@ -152,11 +149,7 @@ class EndorserDIDOptionSchema(OpenAPISchema):
 @request_schema(SchemaSendRequestSchema())
 @querystring_schema(AutoEndorseOptionSchema())
 @querystring_schema(EndorserDIDOptionSchema())
-<<<<<<< HEAD
-@response_schema(SchemaSendResultsSchema(), 200, description="")
-=======
 @response_schema(TxnOrSchemaSendResultSchema(), 200, description="")
->>>>>>> main
 async def schemas_send_schema(request: web.BaseRequest):
     """
     Request handler for sending a credential offer.
@@ -204,13 +197,9 @@ async def schemas_send_schema(request: web.BaseRequest):
             raise web.HTTPBadRequest(reason=err.roll_up) from err
 
     if auto_endorse:
-<<<<<<< HEAD
-        return web.json_response({"schema_id": schema_id, "schema": schema_def})
-=======
         return web.json_response(
             {"sent": {"schema_id": schema_id, "schema": schema_def}}
         )
->>>>>>> main
     else:
         session = await context.session()
 
@@ -223,11 +212,7 @@ async def schemas_send_schema(request: web.BaseRequest):
         except StorageError as err:
             raise web.HTTPBadRequest(reason=err.roll_up) from err
 
-<<<<<<< HEAD
-        return web.json_response(transaction.serialize())
-=======
         return web.json_response({"txn": transaction.serialize()})
->>>>>>> main
 
 
 @docs(

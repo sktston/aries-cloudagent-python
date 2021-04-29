@@ -394,17 +394,10 @@ class TestAdminServer(AsyncTestCase):
             f"http://127.0.0.1:{self.port}/status/config",
             headers={"x-api-key": "test-api-key"},
         ) as response:
-<<<<<<< HEAD
-            result = json.loads(await response.text())
-            assert "admin.admin_insecure_mode" in result
-            assert all(
-                k not in result
-=======
             config = json.loads(await response.text())["config"]
             assert "admin.admin_insecure_mode" in config
             assert all(
                 k not in config
->>>>>>> main
                 for k in [
                     "admin.admin_api_key",
                     "multitenant.jwt_secret",
@@ -414,11 +407,7 @@ class TestAdminServer(AsyncTestCase):
                     "wallet.storage.creds",
                 ]
             )
-<<<<<<< HEAD
-            assert result["admin.webhook_urls"] == [
-=======
             assert config["admin.webhook_urls"] == [
->>>>>>> main
                 "localhost:8123/abc",
                 "localhost:8123/def",
             ]

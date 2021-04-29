@@ -130,8 +130,6 @@ class TestV20PresRequest(TestCase):
             assert pres_req.attachment(V20PresFormat.Format.INDY) == INDY_PROOF_REQ[i]
             assert pres_req._type == DIDCommPrefix.qualify_current(PRES_20_REQUEST)
 
-<<<<<<< HEAD
-=======
     def test_attachment_no_target_format(self):
         """Test attachment behaviour for only unknown formats."""
 
@@ -146,7 +144,6 @@ class TestV20PresRequest(TestCase):
         )
         assert x_pres_req.attachment() is None
 
->>>>>>> main
     def test_serde(self):
         """Test de/serialization."""
         for pres_req_msg in PRES_REQ:
@@ -173,8 +170,6 @@ class TestV20PresRequest(TestCase):
             )  # more attachments than formats
             with self.assertRaises(BaseModelError):
                 V20PresRequest.deserialize(pres_req_dict)
-<<<<<<< HEAD
-=======
 
             pres_req_msg.formats.append(  # unknown format: no validation
                 V20PresFormat(
@@ -191,4 +186,3 @@ class TestV20PresRequest(TestCase):
                 }
             )
             V20PresRequest.deserialize(obj)
->>>>>>> main

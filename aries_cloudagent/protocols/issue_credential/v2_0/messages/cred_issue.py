@@ -64,16 +64,6 @@ class V20CredIssue(AgentMessage):
             fmt: format of attachment in list to decode and return
 
         """
-<<<<<<< HEAD
-        return (
-            (
-                fmt or V20CredFormat.Format.get(self.formats[0].format)
-            ).get_attachment_data(
-                self.formats,
-                self.credentials_attach,
-            )
-            if self.formats
-=======
         target_format = (
             fmt
             if fmt
@@ -88,7 +78,6 @@ class V20CredIssue(AgentMessage):
         return (
             target_format.get_attachment_data(self.formats, self.credentials_attach)
             if target_format
->>>>>>> main
             else None
         )
 
