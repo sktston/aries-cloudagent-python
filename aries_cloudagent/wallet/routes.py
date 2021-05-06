@@ -298,11 +298,7 @@ async def wallet_did_list(request: web.BaseRequest):
 
 
 @docs(tags=["wallet"], summary="Create a local DID")
-<<<<<<< HEAD
-@request_schema(DIDCreateSchema)
-=======
 @request_schema(DIDCreateSchema())
->>>>>>> main
 @response_schema(DIDResultSchema, 200, description="")
 async def wallet_create_did(request: web.BaseRequest):
     """
@@ -344,11 +340,7 @@ async def wallet_create_did(request: web.BaseRequest):
     body = await request.json() if request.body_exists else {}
     seed = body.get("seed")
     try:
-<<<<<<< HEAD
-        info = await wallet.create_local_did(seed=seed)
-=======
-        info = await wallet.create_local_did(method=method, key_type=key_type)
->>>>>>> main
+        info = await wallet.create_local_did(method=method, key_type=key_type, seed=seed)
 
     except WalletError as err:
         raise web.HTTPBadRequest(reason=err.roll_up) from err

@@ -16,14 +16,12 @@ from aiohttp_apispec import (
     setup_aiohttp_apispec,
     validation_middleware,
 )
-<<<<<<< HEAD
 
 from elasticapm.contrib.aiohttp import ElasticAPM
 
-=======
 import aiohttp_cors
 import jwt
->>>>>>> main
+
 from marshmallow import fields
 
 from ..config.injection_context import InjectionContext
