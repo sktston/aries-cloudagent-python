@@ -15,8 +15,10 @@ from ....messaging.valid import DID_PREFIX
 from ....storage.error import StorageNotFoundError
 from ....transport.inbound.receipt import MessageReceipt
 from ....wallet.base import BaseWallet
+from ....wallet.key_type import KeyType
+from ....wallet.did_method import DIDMethod
 from ....wallet.did_posture import DIDPosture
-from ....wallet.util import did_key_to_naked
+from ....did.did_key import DIDKey
 from ....multitenant.manager import MultitenantManager
 
 from ...coordinate_mediation.v1_0.manager import MediationManager
@@ -112,7 +114,9 @@ class DIDXManager(BaseConnectionManager):
         conn_rec = ConnRecord(
             invitation_key=(
                 # invitation.service_blocks[0].recipient_keys[0]
-                did_key_to_naked(invitation.service_blocks[0].recipient_keys[0])
+                DIDKey.from_did(
+                    invitation.service_blocks[0].recipient_keys[0]
+                ).public_key_b58
                 if invitation.service_blocks
                 else None
             ),
@@ -235,7 +239,10 @@ class DIDXManager(BaseConnectionManager):
             my_info = await wallet.get_local_did(conn_rec.my_did)
         else:
             # Create new DID for connection
-            my_info = await wallet.create_local_did()
+            my_info = await wallet.create_local_did(
+                method=DIDMethod.SOV,
+                key_type=KeyType.ED25519,
+            )
             conn_rec.my_did = my_info.did
             keylist_updates = await mediation_mgr.add_key(
                 my_info.verkey, keylist_updates
@@ -363,7 +370,10 @@ class DIDXManager(BaseConnectionManager):
             connection_key = conn_rec.invitation_key
             if conn_rec.is_multiuse_invitation:
                 wallet = self._session.inject(BaseWallet)
-                my_info = await wallet.create_local_did()
+                my_info = await wallet.create_local_did(
+                    method=DIDMethod.SOV,
+                    key_type=KeyType.ED25519,
+                )
                 keylist_updates = await mediation_mgr.add_key(
                     my_info.verkey, keylist_updates
                 )
@@ -433,7 +443,10 @@ class DIDXManager(BaseConnectionManager):
             )
         else:
             # request is against implicit invitation on public DID
-            my_info = await wallet.create_local_did()
+            my_info = await wallet.create_local_did(
+                method=DIDMethod.SOV,
+                key_type=KeyType.ED25519,
+            )
 
             keylist_updates = await mediation_mgr.add_key(
                 my_info.verkey, keylist_updates
@@ -544,7 +557,10 @@ class DIDXManager(BaseConnectionManager):
         if conn_rec.my_did:
             my_info = await wallet.get_local_did(conn_rec.my_did)
         else:
-            my_info = await wallet.create_local_did()
+            my_info = await wallet.create_local_did(
+                method=DIDMethod.SOV,
+                key_type=KeyType.ED25519,
+            )
             conn_rec.my_did = my_info.did
             keylist_updates = await mediation_mgr.add_key(
                 my_info.verkey, keylist_updates

@@ -37,13 +37,15 @@ from ..protocols.out_of_band.v1_0.messages.invitation import HSProto, Invitation
 from ..transport.inbound.manager import InboundTransportManager
 from ..transport.inbound.message import InboundMessage
 from ..transport.outbound.base import OutboundDeliveryError
-from ..transport.outbound.queue.base import BaseOutboundQueue
 from ..transport.outbound.manager import OutboundTransportManager, QueuedOutboundMessage
 from ..transport.outbound.message import OutboundMessage
+from ..transport.outbound.queue.base import BaseOutboundQueue
 from ..transport.outbound.queue.loader import get_outbound_queue
+from ..transport.outbound.status import OutboundSendStatus
 from ..transport.wire_format import BaseWireFormat
 from ..utils.stats import Collector
 from ..utils.task_queue import CompletedTask, TaskQueue
+from ..vc.ld_proofs.document_loader import DocumentLoader
 from ..wallet.did_info import DIDInfo
 from .dispatcher import Dispatcher
 
@@ -128,6 +130,11 @@ class Conductor:
             multitenant_mgr = MultitenantManager(self.root_profile)
             context.injector.bind_instance(MultitenantManager, multitenant_mgr)
 
+        # Bind default PyLD document loader
+        context.injector.bind_instance(
+            DocumentLoader, DocumentLoader(self.root_profile)
+        )
+
         self.outbound_queue = get_outbound_queue(context.settings)
 
         # Admin API
@@ -146,10 +153,6 @@ class Conductor:
                     self.dispatcher.task_queue,
                     self.get_stats,
                 )
-                webhook_urls = context.settings.get("admin.webhook_urls")
-                if webhook_urls:
-                    for url in webhook_urls:
-                        self.admin_server.add_webhook_target(url)
                 context.injector.bind_instance(BaseAdminServer, self.admin_server)
             except Exception:
                 LOGGER.exception("Unable to register admin server")
@@ -206,7 +209,6 @@ class Conductor:
             responder = AdminResponder(
                 self.root_profile,
                 self.admin_server.outbound_message_router,
-                self.admin_server.send_webhook,
             )
             context.injector.bind_instance(BaseResponder, responder)
 
@@ -398,7 +400,6 @@ class Conductor:
                 profile,
                 message,
                 self.outbound_message_router,
-                self.admin_server and self.admin_server.send_webhook,
                 lambda completed: self.dispatch_complete(message, completed),
             )
         except (LedgerConfigError, LedgerTransactionError) as e:
@@ -454,7 +455,7 @@ class Conductor:
         profile: Profile,
         outbound: OutboundMessage,
         inbound: InboundMessage = None,
-    ) -> None:
+    ) -> OutboundSendStatus:
         """
         Route an outbound message.
 
@@ -468,10 +469,11 @@ class Conductor:
                 outbound.reply_from_verkey = inbound.receipt.recipient_verkey
             # return message to an inbound session
             if self.inbound_transport_manager.return_to_session(outbound):
-                return
+                return OutboundSendStatus.SENT_TO_SESSION
 
         if not outbound.to_session_only:
             await self.queue_outbound(profile, outbound, inbound)
+            return OutboundSendStatus.QUEUED_FOR_DELIVERY
 
     def handle_not_returned(self, profile: Profile, outbound: OutboundMessage):
         """Handle a message that failed delivery via an inbound session."""
