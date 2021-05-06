@@ -19,6 +19,7 @@ from ....ledger.error import LedgerError
 from ....messaging.credential_definitions.util import CRED_DEF_TAGS
 from ....messaging.models.base import BaseModelError, OpenAPISchema
 from ....messaging.valid import (
+    ENDPOINT,
     INDY_CRED_DEF_ID,
     INDY_DID,
     INDY_SCHEMA_ID,
@@ -33,12 +34,10 @@ from ....utils.outofband import serialize_outofband
 from ....utils.tracing import trace_event, get_timer, AdminAPIMessageTracingSchema
 
 from ...problem_report.v1_0 import internal_error
-from ...problem_report.v1_0.message import ProblemReport
 
 from .manager import CredentialManager, CredentialManagerError
 from .message_types import SPEC_URI
-from .messages.credential_proposal import CredentialProposal
-from .messages.credential_offer import CredentialOfferSchema
+from .messages.credential_proposal import CredentialProposal, CredentialProposalSchema
 from .messages.inner.credential_preview import (
     CredentialPreview,
     CredentialPreviewSchema,
@@ -138,11 +137,6 @@ class V10CredentialCreateSchema(AdminAPIMessageTracingSchema):
     comment = fields.Str(
         description="Human-readable comment", required=False, allow_none=True
     )
-    trace = fields.Bool(
-        description="Whether to trace event (default false)",
-        required=False,
-        example=False,
-    )
     credential_proposal = fields.Nested(CredentialPreviewSchema, required=True)
 
 
@@ -184,11 +178,6 @@ class V10CredentialProposalRequestSchemaBase(AdminAPIMessageTracingSchema):
     comment = fields.Str(
         description="Human-readable comment", required=False, allow_none=True
     )
-    trace = fields.Bool(
-        description="Whether to trace event (default false)",
-        required=False,
-        example=False,
-    )
 
 
 class V10CredentialProposalRequestOptSchema(V10CredentialProposalRequestSchemaBase):
@@ -203,8 +192,18 @@ class V10CredentialProposalRequestMandSchema(V10CredentialProposalRequestSchemaB
     credential_proposal = fields.Nested(CredentialPreviewSchema, required=True)
 
 
-class V10CredentialOfferRequestSchema(AdminAPIMessageTracingSchema):
-    """Request schema for sending credential offer admin message."""
+class V10CredentialBoundOfferRequestSchema(OpenAPISchema):
+    """Request schema for sending bound credential offer admin message."""
+
+    counter_proposal = fields.Nested(
+        CredentialProposalSchema,
+        required=False,
+        description="Optional counter-proposal",
+    )
+
+
+class V10CredentialFreeOfferRequestSchema(AdminAPIMessageTracingSchema):
+    """Request schema for sending free credential offer admin message."""
 
     connection_id = fields.UUID(
         description="Connection identifier",
@@ -235,10 +234,18 @@ class V10CredentialOfferRequestSchema(AdminAPIMessageTracingSchema):
         description="Human-readable comment", required=False, allow_none=True
     )
     credential_preview = fields.Nested(CredentialPreviewSchema, required=True)
-    trace = fields.Bool(
-        description="Whether to trace event (default false)",
-        required=False,
-        example=False,
+
+
+class V10CreateFreeOfferResultSchema(OpenAPISchema):
+    """Result schema for creating free offer."""
+
+    response = fields.Nested(
+        V10CredentialExchange(),
+        description="Credential exchange record",
+    )
+    oob_url = fields.Str(
+        description="Out-of-band URL",
+        **ENDPOINT,
     )
 
 
@@ -253,7 +260,7 @@ class V10CredentialIssueRequestSchema(OpenAPISchema):
 class V10CredentialProblemReportRequestSchema(OpenAPISchema):
     """Request schema for sending problem report."""
 
-    explain_ltxt = fields.Str(required=True)
+    description = fields.Str(required=True)
 
 
 class CredIdMatchInfoSchema(OpenAPISchema):
@@ -633,10 +640,11 @@ async def _create_free_offer(
 
     credential_manager = CredentialManager(profile)
 
-    (
+    (cred_ex_record, credential_offer_message,) = await credential_manager.create_offer(
         cred_ex_record,
-        credential_offer_message,
-    ) = await credential_manager.create_offer(cred_ex_record, comment=comment)
+        counter_proposal=None,
+        comment=comment,
+    )
 
     return (cred_ex_record, credential_offer_message)
 
@@ -645,8 +653,8 @@ async def _create_free_offer(
     tags=["issue-credential v1.0"],
     summary="Create a credential offer, independent of any proposal",
 )
-@request_schema(V10CredentialOfferRequestSchema())
-@response_schema(CredentialOfferSchema(), 200, description="")
+@request_schema(V10CredentialFreeOfferRequestSchema())
+@response_schema(V10CreateFreeOfferResultSchema(), 200, description="")
 async def credential_exchange_create_free_offer(request: web.BaseRequest):
     """
     Request handler for creating free credential offer.
@@ -748,7 +756,7 @@ async def credential_exchange_create_free_offer(request: web.BaseRequest):
     tags=["issue-credential v1.0"],
     summary="Send holder a credential offer, independent of any proposal",
 )
-@request_schema(V10CredentialOfferRequestSchema())
+@request_schema(V10CredentialFreeOfferRequestSchema())
 @response_schema(V10CredentialExchangeSchema(), 200, description="")
 async def credential_exchange_send_free_offer(request: web.BaseRequest):
     """
@@ -837,6 +845,7 @@ async def credential_exchange_send_free_offer(request: web.BaseRequest):
     summary="Send holder a credential offer in reference to a proposal with preview",
 )
 @match_info_schema(CredExIdMatchInfoSchema())
+@request_schema(V10CredentialBoundOfferRequestSchema())
 @response_schema(V10CredentialExchangeSchema(), 200, description="")
 async def credential_exchange_send_bound_offer(request: web.BaseRequest):
     """
@@ -856,6 +865,9 @@ async def credential_exchange_send_bound_offer(request: web.BaseRequest):
 
     context: AdminRequestContext = request["context"]
     outbound_handler = request["outbound_message_router"]
+
+    body = await request.json() if request.body_exists else {}
+    proposal_spec = body.get("counter_proposal")
 
     credential_exchange_id = request.match_info["cred_ex_id"]
     cred_ex_record = None
@@ -887,7 +899,13 @@ async def credential_exchange_send_bound_offer(request: web.BaseRequest):
         (
             cred_ex_record,
             credential_offer_message,
-        ) = await credential_manager.create_offer(cred_ex_record, comment=None)
+        ) = await credential_manager.create_offer(
+            cred_ex_record,
+            counter_proposal=(
+                CredentialProposal.deserialize(proposal_spec) if proposal_spec else None
+            ),
+            comment=None,
+        )
 
         result = cred_ex_record.serialize()
 
@@ -1135,6 +1153,48 @@ async def credential_exchange_store(request: web.BaseRequest):
 
 @docs(
     tags=["issue-credential v1.0"],
+    summary="Send a problem report for credential exchange",
+)
+@match_info_schema(CredExIdMatchInfoSchema())
+@request_schema(V10CredentialProblemReportRequestSchema())
+@response_schema(IssueCredentialModuleResponseSchema(), 200, description="")
+async def credential_exchange_problem_report(request: web.BaseRequest):
+    """
+    Request handler for sending problem report.
+
+    Args:
+        request: aiohttp request object
+
+    """
+    context: AdminRequestContext = request["context"]
+    outbound_handler = request["outbound_message_router"]
+
+    credential_exchange_id = request.match_info["cred_ex_id"]
+    body = await request.json()
+
+    credential_manager = CredentialManager(context.profile)
+
+    try:
+        async with context.session() as session:
+            cred_ex_record = await V10CredentialExchange.retrieve_by_id(
+                session, credential_exchange_id
+            )
+        report = await credential_manager.create_problem_report(
+            cred_ex_record,
+            body["description"],
+        )
+    except StorageNotFoundError as err:
+        await internal_error(err, web.HTTPNotFound, None, outbound_handler)
+    except StorageError as err:
+        await internal_error(err, web.HTTPBadRequest, cred_ex_record, outbound_handler)
+
+    await outbound_handler(report, connection_id=cred_ex_record.connection_id)
+
+    return web.json_response({})
+
+
+@docs(
+    tags=["issue-credential v1.0"],
     summary="Remove an existing credential exchange record",
 )
 @match_info_schema(CredExIdMatchInfoSchema())
@@ -1162,52 +1222,6 @@ async def credential_exchange_remove(request: web.BaseRequest):
         await internal_error(err, web.HTTPNotFound, cred_ex_record, outbound_handler)
     except StorageError as err:
         await internal_error(err, web.HTTPBadRequest, cred_ex_record, outbound_handler)
-
-    return web.json_response({})
-
-
-@docs(
-    tags=["issue-credential v1.0"],
-    summary="Send a problem report for credential exchange",
-)
-@match_info_schema(CredExIdMatchInfoSchema())
-@request_schema(V10CredentialProblemReportRequestSchema())
-@response_schema(IssueCredentialModuleResponseSchema(), 200, description="")
-async def credential_exchange_problem_report(request: web.BaseRequest):
-    """
-    Request handler for sending problem report.
-
-    Args:
-        request: aiohttp request object
-
-    """
-    r_time = get_timer()
-
-    context: AdminRequestContext = request["context"]
-    outbound_handler = request["outbound_message_router"]
-
-    credential_exchange_id = request.match_info["cred_ex_id"]
-    body = await request.json()
-
-    try:
-        async with await context.session() as session:
-            cred_ex_record = await V10CredentialExchange.retrieve_by_id(
-                session, credential_exchange_id
-            )
-    except StorageNotFoundError as err:
-        raise web.HTTPNotFound(reason=err.roll_up) from err
-
-    error_result = ProblemReport(explain_ltxt=body["explain_ltxt"])
-    error_result.assign_thread_id(cred_ex_record.thread_id)
-
-    await outbound_handler(error_result, connection_id=cred_ex_record.connection_id)
-
-    trace_event(
-        context.settings,
-        error_result,
-        outcome="credential_exchange_problem_report.END",
-        perf_counter=r_time,
-    )
 
     return web.json_response({})
 
