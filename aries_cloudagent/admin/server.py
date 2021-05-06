@@ -21,7 +21,6 @@ from elasticapm.contrib.aiohttp import ElasticAPM
 
 import aiohttp_cors
 import jwt
-
 from marshmallow import fields
 
 from ..config.injection_context import InjectionContext
