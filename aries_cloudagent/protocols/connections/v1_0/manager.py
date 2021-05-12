@@ -1089,9 +1089,21 @@ class ConnectionManager(BaseConnectionManager):
                     receipt.recipient_verkey,
                 )
 
-        LOGGER.info("find_connection - sender_did:" + receipt.sender_did)
-        LOGGER.info("find_connection - recipient_did:" + receipt.recipient_did)
-        LOGGER.info("find_connection - recipient_verkey:" + receipt.recipient_verkey)
+        if receipt.sender_did:
+            LOGGER.info("find_connection - sender_did:" + receipt.sender_did)
+        else:
+            LOGGER.info("find_connection - sender_did: None")
+
+        if receipt.recipient_did:
+            LOGGER.info("find_connection - recipient_did:" + receipt.recipient_did)
+        else:
+            LOGGER.info("find_connection - recipient_did: None")
+
+        if receipt.recipient_verkey:
+            LOGGER.info("find_connection - recipient_verkey:" + receipt.recipient_verkey)
+        else:
+            LOGGER.info("find_connection - recipient_verkey: None")
+
         return await self.find_connection(
             receipt.sender_did, receipt.recipient_did, receipt.recipient_verkey, True
         )
