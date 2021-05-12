@@ -35,6 +35,8 @@ from .messages.connection_response import ConnectionResponse
 from .messages.problem_report import ProblemReportReason
 from .models.connection_detail import ConnectionDetail
 
+LOGGER = logging.getLogger(__name__)
+
 
 class ConnectionManagerError(BaseError):
     """Connection error."""
@@ -997,6 +999,10 @@ class ConnectionManager(BaseConnectionManager):
         connection = None
         resolved = False
 
+        LOGGER.info("receipt - sender_verkey:" + receipt.sender_verkey)
+        LOGGER.info("receipt - recipient_verkey:" + receipt.recipient_verkey)
+        LOGGER.info("receipt - raw_message:" + receipt.raw_message)
+
         if receipt.sender_verkey and receipt.recipient_verkey:
             cache_key = (
                 f"connection_by_verkey::{receipt.sender_verkey}"
@@ -1027,6 +1033,10 @@ class ConnectionManager(BaseConnectionManager):
 
         if not connection and not resolved:
             connection = await self.resolve_inbound_connection(receipt)
+
+        if not connection:
+            LOGGER.warning("connection is none")
+
         return connection
 
     async def resolve_inbound_connection(self, receipt: MessageReceipt) -> ConnRecord:
