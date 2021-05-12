@@ -1121,7 +1121,6 @@ class ConnectionManager(BaseConnectionManager):
             connection_id = connection.connection_id
         cache = self._session.inject(BaseCache, required=False)
         cache_key = f"connection_target::{connection_id}"
-        cache = None  # FIXME: disable cache for connection_targets
         if cache:
             async with cache.acquire(cache_key) as entry:
                 if entry.result:
@@ -1136,7 +1135,8 @@ class ConnectionManager(BaseConnectionManager):
 
                     targets = await self.fetch_connection_targets(connection)
 
-                    await entry.set_result([row.serialize() for row in targets], 3600)
+                    # FIXME: disable cache of connection_targets for scale-out servers
+                    # await entry.set_result([row.serialize() for row in targets], 3600)
         else:
             targets = await self.fetch_connection_targets(connection)
         return targets
