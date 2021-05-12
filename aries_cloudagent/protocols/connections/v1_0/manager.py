@@ -1019,6 +1019,10 @@ class ConnectionManager(BaseConnectionManager):
                         connection = await ConnRecord.retrieve_by_id(
                             self._session, cached["id"]
                         )
+                        if connection:
+                            LOGGER.info("cache hit - found connection")
+                        else:
+                            LOGGER.info("cache hit - NOT found connection")
                     else:
                         connection = await self.resolve_inbound_connection(receipt)
                         if connection:
@@ -1029,10 +1033,14 @@ class ConnectionManager(BaseConnectionManager):
                                 "recipient_did_public": receipt.recipient_did_public,
                             }
                             await entry.set_result(cache_val, 3600)
+                            LOGGER.info("NOT cache hit - found connection")
+                        else:
+                            LOGGER.info("NOT cache hit - NOT found connection")
                         resolved = True
 
         if not connection and not resolved:
             connection = await self.resolve_inbound_connection(receipt)
+            LOGGER.info("not connection and not resolved")
 
         if not connection:
             LOGGER.warning("connection is none")
