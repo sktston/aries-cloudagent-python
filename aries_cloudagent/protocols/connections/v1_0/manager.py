@@ -1102,7 +1102,8 @@ class ConnectionManager(BaseConnectionManager):
 
                     targets = await self.fetch_connection_targets(connection)
 
-                    await entry.set_result([row.serialize() for row in targets], 3600)
+                    # FIXME: disable cache of connection_targets for scale-out servers
+                    # await entry.set_result([row.serialize() for row in targets], 3600)
         else:
             targets = await self.fetch_connection_targets(connection)
         return targets
