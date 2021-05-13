@@ -1088,7 +1088,6 @@ class ConnectionManager(BaseConnectionManager):
             connection_id = connection.connection_id
         cache = self._session.inject(BaseCache, required=False)
         cache_key = f"connection_target::{connection_id}"
-        cache = None  # FIXME: disable cache for connection_targets
         if cache:
             async with cache.acquire(cache_key) as entry:
                 if entry.result:
