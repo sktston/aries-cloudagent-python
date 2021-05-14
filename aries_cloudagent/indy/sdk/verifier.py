@@ -160,8 +160,9 @@ class IndySdkVerifier(IndyVerifier):
                     raise ValueError(f"Missing revealed attribute: '{attr}'")
                 if primary_enco != spec["encoded"]:
                     raise ValueError(f"Encoded representation mismatch for '{attr}'")
-                if primary_enco != encode(spec["raw"]):
-                    raise ValueError(f"Encoded representation mismatch for '{attr}'")
+                # FIXME: do not compare encoded with encode(raw) to allow other encode methods
+                # if primary_enco != encode(spec["raw"]):
+                #     raise ValueError(f"Encoded representation mismatch for '{attr}'")
 
     async def check_timestamps(
         self,
