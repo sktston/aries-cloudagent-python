@@ -37,17 +37,12 @@ class IndyDIDResolver(BaseDIDResolver):
 
     @property
     def supported_methods(self) -> Sequence[str]:
-<<<<<<< HEAD
-        """Return supported methods of Indy DID Resolver."""
-        return ["ssw"]
-=======
         """
         Return supported methods of Indy DID Resolver.
 
         DEPRECATED: Use supported_did_regex instead.
         """
-        return ["sov"]
->>>>>>> main
+        return ["ssw"]
 
     @property
     def supported_did_regex(self) -> Pattern:

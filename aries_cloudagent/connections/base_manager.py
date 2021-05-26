@@ -11,11 +11,8 @@ from pydid import DIDCommService, DIDDocument as ResolvedDocument, VerificationM
 
 from ..core.error import BaseError
 from ..core.profile import ProfileSession
-<<<<<<< HEAD
 from ..messaging.valid import DID_PREFIX
-=======
 from ..did.did_key import DIDKey
->>>>>>> main
 from ..protocols.connections.v1_0.messages.connection_invitation import (
     ConnectionInvitation,
 )
