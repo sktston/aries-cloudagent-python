@@ -2,15 +2,18 @@
 
 Resolution is performed using the IndyLedger class.
 """
-from typing import Sequence
+
+from typing import Sequence, Pattern
 
 from pydid import DID, DIDDocumentBuilder, VerificationSuite
 
 from ...config.injection_context import InjectionContext
 from ...core.profile import Profile
-from ...ledger.indy import IndySdkLedger
+from ...ledger.indy import IndySdkLedger, EndpointType
 from ...ledger.base import BaseLedger
 from ...ledger.error import LedgerError
+from ...messaging.valid import IndyDID
+
 from ..base import BaseDIDResolver, DIDNotFound, ResolverError, ResolverType
 
 
@@ -34,8 +37,22 @@ class IndyDIDResolver(BaseDIDResolver):
 
     @property
     def supported_methods(self) -> Sequence[str]:
+<<<<<<< HEAD
         """Return supported methods of Indy DID Resolver."""
         return ["ssw"]
+=======
+        """
+        Return supported methods of Indy DID Resolver.
+
+        DEPRECATED: Use supported_did_regex instead.
+        """
+        return ["sov"]
+>>>>>>> main
+
+    @property
+    def supported_did_regex(self) -> Pattern:
+        """Return supported_did_regex of Indy DID Resolver."""
+        return IndyDID.PATTERN
 
     async def _resolve(self, profile: Profile, did: str) -> dict:
         """Resolve an indy DID."""
@@ -46,7 +63,7 @@ class IndyDIDResolver(BaseDIDResolver):
         try:
             async with ledger:
                 recipient_key = await ledger.get_key_for_did(did)
-                endpoint = await ledger.get_endpoint_for_did(did)
+                endpoints = await ledger.get_all_endpoints_for_did(did)
         except LedgerError as err:
             raise DIDNotFound(f"DID {did} could not be resolved") from err
 
@@ -57,14 +74,25 @@ class IndyDIDResolver(BaseDIDResolver):
         )
         builder.authentication.reference(vmethod.id)
         builder.assertion_method.reference(vmethod.id)
-        if endpoint:
-            # TODO add priority
-            builder.services.add_didcomm(
-                ident=self.AGENT_SERVICE_TYPE,
-                type_=self.AGENT_SERVICE_TYPE,
-                endpoint=endpoint,
-                recipient_keys=[vmethod],
-                routing_keys=[],
-            )
+        if endpoints:
+            for type_, endpoint in endpoints.items():
+                if type_ == EndpointType.ENDPOINT.indy:
+                    # TODO add priority
+                    builder.services.add_didcomm(
+                        ident=self.AGENT_SERVICE_TYPE,
+                        type_=self.AGENT_SERVICE_TYPE,
+                        endpoint=endpoint,
+                        priority=1,
+                        recipient_keys=[vmethod],
+                        routing_keys=[],
+                    )
+                else:
+                    # Accept all service types for now
+                    builder.services.add(
+                        ident=type_,
+                        type_=type_,
+                        endpoint=endpoint,
+                    )
+
         result = builder.build()
         return result.serialize()
