@@ -29,7 +29,7 @@ class PingRequestResponseSchema(OpenAPISchema):
     thread_id = fields.Str(required=False, description="Thread ID of the ping message")
 
 
-class PingConnIdMatchInfoSchema(OpenAPISchema):
+class ConnIdMatchInfoSchema(OpenAPISchema):
     """Path parameters and validators for request taking connection id."""
 
     conn_id = fields.Str(
@@ -38,7 +38,7 @@ class PingConnIdMatchInfoSchema(OpenAPISchema):
 
 
 @docs(tags=["trustping"], summary="Send a trust ping to a connection")
-@match_info_schema(PingConnIdMatchInfoSchema())
+@match_info_schema(ConnIdMatchInfoSchema())
 @request_schema(PingRequestSchema())
 @response_schema(PingRequestResponseSchema(), 200, description="")
 async def connections_send_ping(request: web.BaseRequest):

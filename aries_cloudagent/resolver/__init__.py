@@ -4,7 +4,6 @@ import logging
 
 from ..config.injection_context import InjectionContext
 from ..config.provider import ClassProvider
-
 from .did_resolver_registry import DIDResolverRegistry
 
 LOGGER = logging.getLogger(__name__)
@@ -29,5 +28,6 @@ async def setup(context: InjectionContext):
         ).provide(context.settings, context.injector)
         await indy_resolver.setup(context)
         registry.register(indy_resolver)
+
     else:
         LOGGER.warning("Ledger is not configured, not loading IndyDIDResolver")

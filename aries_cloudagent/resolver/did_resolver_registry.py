@@ -3,8 +3,6 @@
 import logging
 from typing import Sequence
 
-from .base import BaseDIDResolver
-
 LOGGER = logging.getLogger(__name__)
 
 
@@ -18,7 +16,7 @@ class DIDResolverRegistry:
     @property
     def resolvers(
         self,
-    ) -> Sequence[BaseDIDResolver]:
+    ) -> Sequence[str]:
         """Accessor for a list of all did resolvers."""
         return self._resolvers
 

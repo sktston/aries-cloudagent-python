@@ -216,7 +216,7 @@ class DIDKey(Regexp):
     """Validate value against DID key specification."""
 
     EXAMPLE = "did:key:z6MkpTHR8VNsBxYAAWHut2Geadd9jSwuBV8xRoAnwWsdvktH"
-    PATTERN = re.compile(rf"^did:key:z[{B58}]+$")
+    PATTERN = rf"^did:key:z[{B58}]+$"
 
     def __init__(self):
         """Initializer."""
@@ -244,7 +244,7 @@ class IndyDID(Regexp):
     """Validate value against indy DID."""
 
     EXAMPLE = "WgWxqztrNooG92RXvxSTWv"
-    PATTERN = re.compile(rf"^({DID_PREFIX}:)?[{B58}]{{21,22}}$")
+    PATTERN = rf"^({DID_PREFIX}:)?[{B58}]{{21,22}}$"
 
     def __init__(self):
         """Initializer."""
@@ -252,28 +252,6 @@ class IndyDID(Regexp):
         super().__init__(
             IndyDID.PATTERN,
             error="Value {input} is not an ssw decentralized identifier (DID)",
-        )
-
-
-class DIDValidation(Regexp):
-    """Validate value against any valid DID spec."""
-
-    METHOD = r"([a-zA-Z0-9_]+)"
-    METHOD_ID = r"([a-zA-Z0-9_.%-]+(:[a-zA-Z0-9_.%-]+)*)"
-    PARAMS = r"((;[a-zA-Z0-9_.:%-]+=[a-zA-Z0-9_.:%-]*)*)"
-    PATH = r"(\/[^#?]*)?"
-    QUERY = r"([?][^#]*)?"
-    FRAGMENT = r"(\#.*)?$"
-
-    EXAMPLE = "did:peer:WgWxqztrNooG92RXvxSTWv"
-    PATTERN = re.compile(rf"^did:{METHOD}:{METHOD_ID}{PARAMS}{PATH}{QUERY}{FRAGMENT}$")
-
-    def __init__(self):
-        """Initializer."""
-
-        super().__init__(
-            DIDValidation.PATTERN,
-            error="Value {input} is not a valid DID",
         )
 
 
@@ -698,7 +676,7 @@ class CredentialSubject(Validator):
 class IndyOrKeyDID(Regexp):
     """Indy or Key DID class."""
 
-    PATTERN = "|".join(x.pattern for x in [DIDKey.PATTERN, IndyDID.PATTERN])
+    PATTERN = re.compile("|".join([DIDKey.PATTERN, IndyDID.PATTERN]))
     EXAMPLE = IndyDID.EXAMPLE
 
     def __init__(

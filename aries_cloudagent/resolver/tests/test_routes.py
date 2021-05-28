@@ -11,29 +11,12 @@ from .. import routes as test_module
 from ..base import (
     DIDMethodNotSupported,
     DIDNotFound,
-    ResolutionMetadata,
-    ResolutionResult,
     ResolverError,
-    ResolverType,
 )
 from ..did_resolver import DIDResolver
 from . import DOC
 
-
-@pytest.fixture
-def did_doc():
-    yield DIDDocument.deserialize(DOC)
-
-
-@pytest.fixture
-def resolution_result(did_doc):
-    metadata = ResolutionMetadata(
-        resolver_type=ResolverType.NATIVE,
-        resolver="mock_resolver",
-        retrieved_time="some time",
-        duration=10,
-    )
-    yield ResolutionResult(did_doc, metadata)
+did_doc = DIDDocument.deserialize(DOC)
 
 
 @pytest.fixture
@@ -46,12 +29,9 @@ def mock_response():
 
 
 @pytest.fixture
-def mock_resolver(resolution_result):
+def mock_resolver():
     did_resolver = async_mock.MagicMock()
     did_resolver.resolve = async_mock.CoroutineMock(return_value=did_doc)
-    did_resolver.resolve_with_metadata = async_mock.CoroutineMock(
-        return_value=resolution_result
-    )
     yield did_resolver
 
 
@@ -75,9 +55,9 @@ def mock_request(mock_resolver):
 
 
 @pytest.mark.asyncio
-async def test_resolver(mock_request, mock_response: async_mock.MagicMock, did_doc):
+async def test_resolver(mock_request, mock_response):
     await test_module.resolve_did(mock_request)
-    mock_response.call_args[0][0] == did_doc.serialize()
+    mock_response.assert_called_once_with(did_doc.serialize())
     # TODO: test http response codes
 
 
@@ -93,9 +73,7 @@ async def test_resolver(mock_request, mock_response: async_mock.MagicMock, did_d
 async def test_resolver_not_found_error(
     mock_resolver, mock_request, side_effect, error
 ):
-    mock_resolver.resolve_with_metadata = async_mock.CoroutineMock(
-        side_effect=side_effect()
-    )
+    mock_resolver.resolve = async_mock.CoroutineMock(side_effect=side_effect())
     with pytest.raises(error):
         await test_module.resolve_did(mock_request)
 

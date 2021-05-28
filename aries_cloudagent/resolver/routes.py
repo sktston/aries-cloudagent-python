@@ -35,16 +35,35 @@ from marshmallow import fields, validate
 
 from ..admin.request_context import AdminRequestContext
 from ..messaging.models.openapi import OpenAPISchema
-from .base import DIDMethodNotSupported, DIDNotFound, ResolverError, ResolutionResult
+from .base import DIDMethodNotSupported, DIDNotFound, ResolverError
 from pydid.common import DID_PATTERN
 from .did_resolver import DIDResolver
 
 
-class ResolutionResultSchema(OpenAPISchema):
+class W3cDIDDoc(validate.Regexp):
+    """Validate value against w3c DID document."""
+
+    EXAMPLE = "*"
+    PATTERN = DID_PATTERN
+
+    def __init__(self):
+        """Initializer."""
+
+        super().__init__(
+            W3cDIDDoc.PATTERN,
+            error="Value {input} is not a w3c decentralized identifier (DID) doc.",
+        )
+
+
+_W3cDIDDoc = {"validate": W3cDIDDoc(), "example": W3cDIDDoc.EXAMPLE}
+
+
+class DIDDocSchema(OpenAPISchema):
     """Result schema for did document query."""
 
-    did_doc = fields.Dict(description="DID Document", required=True)
-    metadata = fields.Dict(description="Resolution metadata", required=True)
+    did_doc = fields.Str(
+        description="decentralize identifier(DID) document", required=True, **_W3cDIDDoc
+    )
 
 
 class W3cDID(validate.Regexp):
@@ -68,13 +87,15 @@ _W3cDID = {"validate": W3cDID(), "example": W3cDID.EXAMPLE}
 class DIDMatchInfoSchema(OpenAPISchema):
     """Path parameters and validators for request taking DID."""
 
-    did = fields.Str(description="DID", required=True, **_W3cDID)
+    did = fields.Str(
+        description="decentralize identifier(DID)", required=True, **_W3cDID
+    )
 
 
 @docs(tags=["resolver"], summary="Retrieve doc for requested did")
 @match_info_schema(DIDMatchInfoSchema())
-@response_schema(ResolutionResultSchema(), 200)
-async def resolve_did(request: web.Request):
+@response_schema(DIDDocSchema(), 200)
+async def resolve_did(request: web.BaseRequest):
     """Retrieve a did document."""
     context: AdminRequestContext = request["context"]
 
@@ -82,16 +103,15 @@ async def resolve_did(request: web.Request):
     try:
         session = await context.session()
         resolver = session.inject(DIDResolver)
-        result: ResolutionResult = await resolver.resolve_with_metadata(
-            context.profile, did
-        )
+        document = await resolver.resolve(context.profile, did)
+        result = document.serialize()
     except DIDNotFound as err:
         raise web.HTTPNotFound(reason=err.roll_up) from err
     except DIDMethodNotSupported as err:
         raise web.HTTPNotImplemented(reason=err.roll_up) from err
     except ResolverError as err:
         raise web.HTTPInternalServerError(reason=err.roll_up) from err
-    return web.json_response(result.serialize())
+    return web.json_response(result)
 
 
 async def register(app: web.Application):

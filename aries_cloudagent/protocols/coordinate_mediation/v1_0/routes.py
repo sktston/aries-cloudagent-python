@@ -1,5 +1,7 @@
 """coordinate mediation admin routes."""
 
+# https://github.com/hyperledger/aries-rfcs/tree/master/features/0211-route-coordination#0211-mediator-coordination-protocol
+
 from aiohttp import web
 from aiohttp_apispec import (
     docs,
@@ -16,10 +18,8 @@ from ....messaging.models.base import BaseModelError
 from ....messaging.models.openapi import OpenAPISchema
 from ....messaging.valid import UUIDFour
 from ....storage.error import StorageError, StorageNotFoundError
-
-from ...connections.v1_0.routes import ConnectionsConnIdMatchInfoSchema
+from ...connections.v1_0.routes import ConnIdMatchInfoSchema
 from ...routing.v1_0.models.route_record import RouteRecord, RouteRecordSchema
-
 from .manager import MediationManager, MediationManagerError
 from .message_types import SPEC_URI
 from .messages.inner.keylist_update_rule import (
@@ -253,7 +253,7 @@ async def delete_mediation_request(request: web.BaseRequest):
 
 
 @docs(tags=["mediation"], summary="Request mediation from connection")
-@match_info_schema(ConnectionsConnIdMatchInfoSchema())
+@match_info_schema(ConnIdMatchInfoSchema())
 @request_schema(MediationCreateRequestSchema())
 @response_schema(MediationRecordSchema(), 201)
 async def request_mediation(request: web.BaseRequest):

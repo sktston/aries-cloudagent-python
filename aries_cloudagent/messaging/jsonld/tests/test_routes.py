@@ -1,10 +1,8 @@
 import json
-import pytest
-
 from copy import deepcopy
-
 from pydid.doc.service import Service
 
+import pytest
 from aiohttp import web
 from asynctest import TestCase as AsyncTestCase
 from asynctest import mock as async_mock
@@ -20,9 +18,6 @@ from ....resolver.did_resolver import DIDResolver
 from ....resolver.tests import DOC
 from ....wallet.base import BaseWallet
 from ....wallet.error import WalletError
-from ....vc.ld_proofs.document_loader import DocumentLoader
-from .document_loader import custom_document_loader
-
 from .. import routes as test_module
 from ..error import (
     BadJWSHeaderError,
@@ -234,9 +229,6 @@ def test_post_process_routes():
 class TestJSONLDRoutes(AsyncTestCase):
     async def setUp(self):
         self.context = AdminRequestContext.test_context()
-        self.context.profile.context.injector.bind_instance(
-            DocumentLoader, custom_document_loader
-        )
         self.did_info = await (await self.context.session()).wallet.create_local_did(
             DIDMethod.SOV, KeyType.ED25519
         )

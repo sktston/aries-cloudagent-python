@@ -1,7 +1,6 @@
 TEST_SEED = "testseed000000000000000000000001"
 TEST_DID = "55GkHamhTU1ZbTbV2ab9DE"
 TEST_VERKEY = "3Dn1SJNPaCXcvvJvSbsFWP2xaCjMom3can8CQNhWrTRx"
-
 TEST_SIGN_OBJ0 = {
     "doc": {
         "@context": [
@@ -34,7 +33,7 @@ TEST_SIGN_OBJ1 = {
             "https://www.w3.org/2018/credentials/v1",
             "https://www.w3.org/2018/credentials/examples/v1",
         ],
-        "id": "http://example.gov/credentials/3735",
+        "id": "http://example.gov/credentials/3732",
         "type": ["VerifiableCredential", "UniversityDegreeCredential"],
         "issuer": "did:example:123",
         "issuanceDate": "2020-03-16T22:37:26.544Z",
@@ -124,7 +123,7 @@ TEST_SIGN_ERROR_OBJ0 = {
         "issuer": "did:example:28394728934792387",
         "name": "European Health Insurance Card",
         "description": "Example of a European Health Insurance Card",
-        "attribute2drop": "drop it like it's hot",
+        "attribute2drop": "drop it like its a tot.",
         "issuanceDate": "2021-01-01T12:19:52Z",
         "expirationDate": "2029-12-03T12:19:52Z",
         "institutionID": "09999 - GE KVG",
@@ -165,7 +164,7 @@ TEST_SIGN_ERROR_OBJ1 = {
         "credentialSubject": {
             "id": "did:example:b34ca6cd37bbf23",
             "type": ["EuropeanHealthInsuranceHolder", "Person"],
-            "attribute2drop": "drop it like it's hot",
+            "attribute2drop": "drop it like its a tot.",
             "familyName": "Muster",
             "giveName": "Maria",
             "birthDate": "1958-07-17",
@@ -219,7 +218,7 @@ TEST_VALIDATE_ERROR_OBJ2 = {
         ],
         "proof": {
             "verificationMethod": "did:example:123#z6MksHh7qHWvybLg5QTPPdG2DgEjjduBDArV9EF9mRiRzMBN",
-            "attribute2drop": "drop it like it's hot",
+            "attribute2drop": "drop it like its a tot.",
             "proofPurpose": "assertionMethod",
             "created": "2020-04-02T18:48:36Z",
             "domain": "example.com",
@@ -354,7 +353,7 @@ TEST_VERIFY_OBJS = [
     TEST_VERIFY_OBJ2,
 ]
 TEST_VERIFY_ERROR = {
-    "verkey": "5yKdnU7ToTjAoRNDzfuzVTfWBH38qyhE1b9xh4v8JaWF",
+    "verkey": ("5yKdnU7ToTjAoRNDzfuzVTfWBH38qyhE1b9xh4v8JaWF"),
     "doc": {
         "@context": [
             "https://www.w3.org/2018/credentials/v1",
@@ -388,42 +387,4 @@ TEST_VERIFY_ERROR = {
             ),
         },
     },
-}
-TEST_EURO_HEALTH = {
-    "@context": {
-        "@version": 1.1,
-        "@protected": True,
-        "name": "http://schema.org/name",
-        "description": "http://schema.org/description",
-        "EuropeanHealthInsuranceCard": {
-            "@id": "https://essif-lab.pages.grnet.gr/interoperability/eidas-generic-use-case#EuropeanHealthInsuranceCard",
-            "@context": {
-                "@version": 1.1,
-                "@protected": True,
-                "id": "@id",
-                "type": "@type",
-                "ehic": "https://essif-lab.pages.grnet.gr/interoperability/eidas-generic-use-case#",
-                "description": "http://schema.org/description",
-                "name": "http://schema.org/name",
-                "institutionID": "ehic:identificationNumberOfTheInstitution",
-                "cardNo": "ehic:identificationNumberOfTheCard",
-                "personalID": "ehic:personalIdentificationNumber",
-            },
-        },
-        "EuropeanHealthInsuranceHolder": {
-            "@id": "https://essif-lab.pages.grnet.gr/interoperability/eidas-generic-use-case#EuropeanHealthInsuranceHolder",
-            "@context": {
-                "@version": 1.1,
-                "@protected": True,
-                "schema": "http://schema.org/",
-                "xsd": "http://www.w3.org/2001/XMLSchema#",
-                "id": "@id",
-                "type": "@type",
-                "birthDate": {"@id": "schema:birthDate", "@type": "xsd:dateTime"},
-                "familyName": "schema:familyName",
-                "givenName": "schema:givenName",
-            },
-        },
-        "Person": "http://schema.org/Person",
-    }
 }

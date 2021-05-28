@@ -10,6 +10,7 @@ from ...core.error import BaseError
 
 from ..models.base import BaseModel
 
+
 DECORATOR_PREFIX = "~"
 
 
@@ -91,6 +92,8 @@ class BaseDecoratorSet(OrderedDict):
 
     def __setitem__(self, key, value):
         """Add a decorator."""
+        if not isinstance(value, (bool, int, str, float, dict, OrderedDict, BaseModel)):
+            raise ValueError(f"Unsupported decorator value: {value}")
         self.load_decorator(key, value)
 
     def load_decorator(self, key: str, value, serialized=False):

@@ -29,8 +29,7 @@ MESSAGE_TYPES = DIDCommPrefix.qualify_all(
             f"{PROTOCOL_PACKAGE}.messages.presentation_ack.PresentationAck"
         ),
         PRESENTATION_PROBLEM_REPORT: (
-            f"{PROTOCOL_PACKAGE}.messages.presentation_problem_report."
-            "PresentationProblemReport"
+            f"{PROTOCOL_PACKAGE}.messages.problem_report.PresentationProblemReport"
         ),
     }
 )

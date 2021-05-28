@@ -1,16 +1,12 @@
 """Test Problem Report Message."""
 import pytest
 
+from asynctest import TestCase as AsyncTestCase
 from unittest import mock, TestCase
 
 from ......messaging.models.base import BaseModelError
 
-from ..problem_report import (
-    OOBProblemReport,
-    OOBProblemReportSchema,
-    ProblemReportReason,
-    ValidationError,
-)
+from ..problem_report import OOBProblemReport, ProblemReportReason
 
 
 class TestOOBProblemReportMessage(TestCase):
@@ -48,9 +44,3 @@ class TestOOBProblemReportMessage(TestCase):
         """Exercise pre-dump serialization requirements."""
         with pytest.raises(BaseModelError):
             data = self.problem_report.serialize()
-
-    def test_validate_x(self):
-        """Exercise validation requirements."""
-        schema = OOBProblemReportSchema()
-        with pytest.raises(ValidationError):
-            schema.validate_fields({})

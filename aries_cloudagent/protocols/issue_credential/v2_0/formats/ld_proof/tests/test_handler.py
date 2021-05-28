@@ -14,6 +14,10 @@ from .......storage.vc_holder.vc_record import VCRecord
 from ..models.cred_detail import (
     LDProofVCDetail,
 )
+from .......wallet.key_type import KeyType
+from .......wallet.error import WalletNotFoundError
+from .......wallet.did_method import DIDMethod
+from .......wallet.base import BaseWallet
 from .......vc.ld_proofs import (
     DocumentLoader,
     DocumentVerificationResult,
@@ -24,11 +28,6 @@ from .......vc.ld_proofs import (
 )
 from .......vc.ld_proofs.constants import SECURITY_CONTEXT_BBS_URL
 from .......vc.tests.document_loader import custom_document_loader
-from .......wallet.key_type import KeyType
-from .......wallet.error import WalletNotFoundError
-from .......wallet.did_method import DIDMethod
-from .......wallet.base import BaseWallet
-
 from ....models.detail.ld_proof import V20CredExRecordLDProof
 from ....models.cred_ex_record import V20CredExRecord
 from ....messages.cred_proposal import V20CredProposal
@@ -45,10 +44,8 @@ from ....message_types import (
     CRED_20_REQUEST,
     CRED_20_ISSUE,
 )
-
-from ...handler import LOGGER, V20CredFormatError
-
 from ..handler import LDProofCredFormatHandler
+from ...handler import LOGGER, V20CredFormatError
 
 TEST_DID_SOV = "did:sov:LjgpST2rjsoxYegQDRm7EL"
 TEST_DID_KEY = "did:key:z6Mkgg342Ycpuk263R9d8Aq6MUaxPn1DDeHyGo38EefXmgDL"
@@ -395,7 +392,7 @@ class TestV20LDProofCredFormatHandler(AsyncTestCase):
         cred_ex_record = V20CredExRecord(
             cred_ex_id="dummy-cxid",
             role=V20CredExRecord.ROLE_ISSUER,
-            cred_proposal=self.cred_proposal,
+            cred_proposal=self.cred_proposal.serialize(),
         )
 
         with async_mock.patch.object(
@@ -434,7 +431,7 @@ class TestV20LDProofCredFormatHandler(AsyncTestCase):
             ],
         )
 
-        cred_ex_record = V20CredExRecord(cred_proposal=cred_proposal)
+        cred_ex_record = async_mock.MagicMock(cred_proposal=cred_proposal.serialize())
 
         with async_mock.patch.object(
             LDProofCredFormatHandler,
@@ -477,7 +474,7 @@ class TestV20LDProofCredFormatHandler(AsyncTestCase):
         cred_ex_record = V20CredExRecord(
             cred_ex_id="dummy-id",
             state=V20CredExRecord.STATE_OFFER_RECEIVED,
-            cred_offer=cred_offer,
+            cred_offer=cred_offer.serialize(),
         )
 
         (cred_format, attachment) = await self.handler.create_request(cred_ex_record)
@@ -495,7 +492,7 @@ class TestV20LDProofCredFormatHandler(AsyncTestCase):
         cred_ex_record = V20CredExRecord(
             cred_ex_id="dummy-id",
             state=V20CredExRecord.STATE_OFFER_RECEIVED,
-            cred_proposal=self.cred_proposal,
+            cred_proposal=self.cred_proposal.serialize(),
         )
 
         (cred_format, attachment) = await self.handler.create_request(cred_ex_record)
@@ -543,7 +540,7 @@ class TestV20LDProofCredFormatHandler(AsyncTestCase):
 
         cred_ex_record = V20CredExRecord(
             cred_ex_id="dummy-cxid",
-            cred_request=cred_request,
+            cred_request=cred_request.serialize(),
         )
 
         with async_mock.patch.object(
@@ -596,7 +593,7 @@ class TestV20LDProofCredFormatHandler(AsyncTestCase):
 
         cred_ex_record = V20CredExRecord(
             cred_ex_id="dummy-cxid",
-            cred_request=cred_request,
+            cred_request=cred_request.serialize(),
         )
 
         with async_mock.patch.object(
@@ -658,8 +655,7 @@ class TestV20LDProofCredFormatHandler(AsyncTestCase):
             ],
         )
         cred_ex_record = V20CredExRecord(
-            cred_ex_id="cred-ex-id",
-            cred_request=cred_request,
+            cred_ex_id="cred-ex-id", cred_request=cred_request.serialize()
         )
 
         await self.handler.receive_credential(cred_ex_record, cred_issue)
@@ -693,8 +689,7 @@ class TestV20LDProofCredFormatHandler(AsyncTestCase):
             requests_attach=[AttachDecorator.data_base64(detail, ident="0")],
         )
         cred_ex_record = V20CredExRecord(
-            cred_ex_id="cred-ex-id",
-            cred_request=cred_request,
+            cred_ex_id="cred-ex-id", cred_request=cred_request.serialize()
         )
 
         with self.assertRaises(V20CredFormatError) as context:
@@ -731,8 +726,7 @@ class TestV20LDProofCredFormatHandler(AsyncTestCase):
             requests_attach=[AttachDecorator.data_base64(detail, ident="0")],
         )
         cred_ex_record = V20CredExRecord(
-            cred_ex_id="cred-ex-id",
-            cred_request=cred_request,
+            cred_ex_id="cred-ex-id", cred_request=cred_request.serialize()
         )
 
         with self.assertRaises(V20CredFormatError) as context:
@@ -774,8 +768,7 @@ class TestV20LDProofCredFormatHandler(AsyncTestCase):
             requests_attach=[AttachDecorator.data_base64(detail, ident="0")],
         )
         cred_ex_record = V20CredExRecord(
-            cred_ex_id="cred-ex-id",
-            cred_request=cred_request,
+            cred_ex_id="cred-ex-id", cred_request=cred_request.serialize()
         )
 
         with self.assertRaises(V20CredFormatError) as context:
@@ -822,8 +815,7 @@ class TestV20LDProofCredFormatHandler(AsyncTestCase):
                 requests_attach=[AttachDecorator.data_base64(detail, ident="0")],
             )
             cred_ex_record = V20CredExRecord(
-                cred_ex_id="cred-ex-id",
-                cred_request=cred_request,
+                cred_ex_id="cred-ex-id", cred_request=cred_request.serialize()
             )
 
             with self.assertRaises(V20CredFormatError) as context:
@@ -847,7 +839,7 @@ class TestV20LDProofCredFormatHandler(AsyncTestCase):
 
         cred_ex_record = V20CredExRecord(
             cred_ex_id="dummy-cxid",
-            cred_issue=cred_issue,
+            cred_issue=cred_issue.serialize(),
         )
 
         cred_id = "cred_id"
@@ -909,7 +901,7 @@ class TestV20LDProofCredFormatHandler(AsyncTestCase):
 
         cred_ex_record = V20CredExRecord(
             cred_ex_id="dummy-cxid",
-            cred_issue=cred_issue,
+            cred_issue=cred_issue.serialize(),
         )
 
         cred_id = "cred_id"

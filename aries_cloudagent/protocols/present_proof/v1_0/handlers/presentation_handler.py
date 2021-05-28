@@ -1,17 +1,11 @@
 """Presentation message handler."""
 
-from .....ledger.error import LedgerError
-from .....messaging.base_handler import BaseHandler
-from .....messaging.models.base import BaseModelError
+from .....messaging.base_handler import BaseHandler, BaseResponder
 from .....messaging.request_context import RequestContext
-from .....messaging.responder import BaseResponder
-from .....storage.error import StorageError
 from .....utils.tracing import trace_event, get_timer
 
-from .. import problem_report_for_record
 from ..manager import PresentationManager
 from ..messages.presentation import Presentation
-from ..messages.presentation_problem_report import ProblemReportReason
 
 
 class PresentationHandler(BaseHandler):
@@ -39,7 +33,7 @@ class PresentationHandler(BaseHandler):
 
         presentation_exchange_record = await presentation_manager.receive_presentation(
             context.message, context.connection_record
-        )  # mgr saves record state null if need be and possible
+        )
 
         r_time = trace_event(
             context.settings,
@@ -48,26 +42,8 @@ class PresentationHandler(BaseHandler):
             perf_counter=r_time,
         )
 
-        # Automatically move to next state if flag is set
         if context.settings.get("debug.auto_verify_presentation"):
-            try:
-                await presentation_manager.verify_presentation(
-                    presentation_exchange_record
-                )
-            except (BaseModelError, LedgerError, StorageError) as err:
-                self._logger.exception(err)
-                if presentation_exchange_record:
-                    async with context.session() as session:
-                        await presentation_exchange_record.save_error_state(
-                            session,
-                            reason=err.roll_up,  # us: be specific
-                        )
-                    await responder.send_reply(
-                        problem_report_for_record(
-                            presentation_exchange_record,
-                            ProblemReportReason.ABANDONED.value,  # them: be vague
-                        )
-                    )
+            await presentation_manager.verify_presentation(presentation_exchange_record)
 
             trace_event(
                 context.settings,

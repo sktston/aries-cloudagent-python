@@ -7,7 +7,7 @@ from .....messaging.base_handler import (
 )
 
 from ..messages.connection_invitation import ConnectionInvitation
-from ..messages.problem_report import ConnectionProblemReport, ProblemReportReason
+from ..messages.problem_report import ProblemReport, ProblemReportReason
 
 
 class ConnectionInvitationHandler(BaseHandler):
@@ -25,7 +25,7 @@ class ConnectionInvitationHandler(BaseHandler):
         self._logger.debug(f"ConnectionInvitationHandler called with context {context}")
         assert isinstance(context.message, ConnectionInvitation)
 
-        report = ConnectionProblemReport(
+        report = ProblemReport(
             problem_code=ProblemReportReason.INVITATION_NOT_ACCEPTED,
             explain="Connection invitations cannot be submitted via agent messaging",
         )
