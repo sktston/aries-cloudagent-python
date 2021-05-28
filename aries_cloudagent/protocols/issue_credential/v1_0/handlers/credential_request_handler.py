@@ -1,18 +1,12 @@
 """Credential request message handler."""
 
-from .....indy.issuer import IndyIssuerError
-from .....ledger.error import LedgerError
-from .....messaging.base_handler import BaseHandler, HandlerException
-from .....messaging.models.base import BaseModelError
+from .....messaging.base_handler import BaseHandler, BaseResponder, HandlerException
 from .....messaging.request_context import RequestContext
-from .....messaging.responder import BaseResponder
-from .....storage.error import StorageError
-from .....utils.tracing import trace_event, get_timer
 
-from .. import problem_report_for_record
-from ..manager import CredentialManager, CredentialManagerError
-from ..messages.credential_problem_report import ProblemReportReason
+from ..manager import CredentialManager
 from ..messages.credential_request import CredentialRequest
+
+from .....utils.tracing import trace_event, get_timer
 
 
 class CredentialRequestHandler(BaseHandler):
@@ -42,7 +36,7 @@ class CredentialRequestHandler(BaseHandler):
         credential_manager = CredentialManager(context.profile)
         cred_ex_record = await credential_manager.receive_request(
             context.message, context.connection_record.connection_id
-        )  # mgr only finds, saves record: on exception, saving state null is hopeless
+        )
 
         r_time = trace_event(
             context.settings,
@@ -55,38 +49,16 @@ class CredentialRequestHandler(BaseHandler):
         if cred_ex_record.auto_issue:
             if (
                 cred_ex_record.credential_proposal_dict
-                and cred_ex_record.credential_proposal_dict.credential_proposal
+                and "credential_proposal" in cred_ex_record.credential_proposal_dict
             ):
-                credential_issue_message = None
-                try:
-                    (
-                        cred_ex_record,
-                        credential_issue_message,
-                    ) = await credential_manager.issue_credential(
-                        cred_ex_record=cred_ex_record,
-                        comment=context.message.comment,
-                    )
-                    await responder.send_reply(credential_issue_message)
-                except (
-                    BaseModelError,
-                    CredentialManagerError,
-                    IndyIssuerError,
-                    LedgerError,
-                    StorageError,
-                ) as err:
-                    self._logger.exception(err)
-                    if cred_ex_record:
-                        async with context.session() as session:
-                            await cred_ex_record.save_error_state(
-                                session,
-                                reason=err.roll_up,  # us: be specific
-                            )
-                        await responder.send_reply(  # them: be vague
-                            problem_report_for_record(
-                                cred_ex_record,
-                                ProblemReportReason.ISSUANCE_ABANDONED.value,
-                            )
-                        )
+                (
+                    cred_ex_record,
+                    credential_issue_message,
+                ) = await credential_manager.issue_credential(
+                    cred_ex_record=cred_ex_record, comment=context.message.comment
+                )
+
+                await responder.send_reply(credential_issue_message)
 
                 trace_event(
                     context.settings,

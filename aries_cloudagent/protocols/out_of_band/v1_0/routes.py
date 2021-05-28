@@ -128,6 +128,12 @@ class InvitationReceiveQueryStringSchema(OpenAPISchema):
     )
 
 
+class InvitationReceiveRequestSchema(InvitationMessageSchema):
+    """Invitation request schema."""
+
+    services = fields.Field()
+
+
 @docs(
     tags=["out-of-band"],
     summary="Create a new connection invitation",
@@ -186,7 +192,7 @@ async def invitation_create(request: web.BaseRequest):
     summary="Receive a new connection invitation",
 )
 @querystring_schema(InvitationReceiveQueryStringSchema())
-@request_schema(InvitationMessageSchema())
+@request_schema(InvitationReceiveRequestSchema())
 @response_schema(ConnRecordSchema(), 200, description="")
 async def invitation_receive(request: web.BaseRequest):
     """

@@ -1,24 +1,19 @@
 """Presentation exchange record."""
 
-import logging
+from os import environ
+from typing import Any, Mapping
 
-from typing import Any, Mapping, Union
+from marshmallow import fields, validate
 
-from marshmallow import fields, Schema, validate
-
-from .....core.profile import ProfileSession
 from .....messaging.models.base_record import BaseExchangeRecord, BaseExchangeSchema
 from .....messaging.valid import UUIDFour
-from .....storage.base import StorageError
 
-from ..messages.pres import V20Pres, V20PresSchema
+from ..messages.pres import V20Pres
 from ..messages.pres_format import V20PresFormat
-from ..messages.pres_proposal import V20PresProposal, V20PresProposalSchema
-from ..messages.pres_request import V20PresRequest, V20PresRequestSchema
+from ..messages.pres_proposal import V20PresProposal
+from ..messages.pres_request import V20PresRequest
 
-from . import UNENCRYPTED_TAGS
-
-LOGGER = logging.getLogger(__name__)
+unencrypted_tags = environ.get("EXCH_UNENCRYPTED_TAGS", "False").upper() == "TRUE"
 
 
 class V20PresExRecord(BaseExchangeRecord):
@@ -32,7 +27,7 @@ class V20PresExRecord(BaseExchangeRecord):
     RECORD_TYPE = "pres_ex_v20"
     RECORD_ID_NAME = "pres_ex_id"
     RECORD_TOPIC = "present_proof_v2_0"
-    TAG_NAMES = {"~thread_id"} if UNENCRYPTED_TAGS else {"thread_id"}
+    TAG_NAMES = {"~thread_id"} if unencrypted_tags else {"thread_id"}
 
     INITIATOR_SELF = "self"
     INITIATOR_EXTERNAL = "external"
@@ -58,15 +53,15 @@ class V20PresExRecord(BaseExchangeRecord):
         initiator: str = None,
         role: str = None,
         state: str = None,
-        pres_proposal: Union[V20PresProposal, Mapping] = None,  # aries message
-        pres_request: Union[V20PresRequest, Mapping] = None,  # aries message
-        pres: Union[V20Pres, Mapping] = None,  # aries message
+        pres_proposal: Mapping = None,  # serialized pres proposal message
+        pres_request: Mapping = None,  # serialized pres proposal message
+        pres: Mapping = None,  # serialized pres message
         verified: str = None,
         auto_present: bool = False,
         error_msg: str = None,
-        trace: bool = False,  # backward compat: BaseRecord.FromStorage()
-        by_format: Mapping = None,  # backward compat: BaseRecord.FromStorage()
-        **kwargs,
+        trace: bool = False,
+        by_format: Mapping = None,  # formalism for base_record.from_storage()
+        **kwargs
     ):
         """Initialize a new PresExRecord."""
         super().__init__(pres_ex_id, state, trace=trace, **kwargs)
@@ -75,17 +70,38 @@ class V20PresExRecord(BaseExchangeRecord):
         self.initiator = initiator
         self.role = role
         self.state = state
-        self._pres_proposal = V20PresProposal.serde(pres_proposal)
-        self._pres_request = V20PresRequest.serde(pres_request)
-        self._pres = V20Pres.serde(pres)
+        self.pres_proposal = pres_proposal
+        self.pres_request = pres_request
+        self.pres = pres
         self.verified = verified
         self.auto_present = auto_present
         self.error_msg = error_msg
+        self.trace = trace
 
     @property
     def pres_ex_id(self) -> str:
         """Accessor for the ID associated with this exchange record."""
         return self._id
+
+    @property
+    def record_value(self) -> dict:
+        """Accessor for JSON record value generated for this pres ex record."""
+        return {
+            prop: getattr(self, prop)
+            for prop in (
+                "connection_id",
+                "initiator",
+                "role",
+                "state",
+                "pres_proposal",
+                "pres_request",
+                "pres",
+                "verified",
+                "auto_present",
+                "error_msg",
+                "trace",
+            )
+        }
 
     @property
     def by_format(self) -> Mapping:
@@ -96,8 +112,9 @@ class V20PresExRecord(BaseExchangeRecord):
             "pres_request": V20PresRequest,
             "pres": V20Pres,
         }.items():
-            msg = getattr(self, item)
-            if msg:
+            mapping = getattr(self, item)
+            if mapping:
+                msg = cls.deserialize(mapping)
                 result.update(
                     {
                         item: {
@@ -110,99 +127,6 @@ class V20PresExRecord(BaseExchangeRecord):
                 )
 
         return result
-
-    @property
-    def pres_proposal(self) -> V20PresProposal:
-        """Accessor; get deserialized view."""
-        return None if self._pres_proposal is None else self._pres_proposal.de
-
-    @pres_proposal.setter
-    def pres_proposal(self, value):
-        """Setter; store de/serialized views."""
-        self._pres_proposal = V20PresProposal.serde(value)
-
-    @property
-    def pres_request(self) -> V20PresRequest:
-        """Accessor; get deserialized view."""
-        return None if self._pres_request is None else self._pres_request.de
-
-    @pres_request.setter
-    def pres_request(self, value):
-        """Setter; store de/serialized views."""
-        self._pres_request = V20PresRequest.serde(value)
-
-    @property
-    def pres(self) -> V20Pres:
-        """Accessor; get deserialized view."""
-        return None if self._pres is None else self._pres.de
-
-    @pres.setter
-    def pres(self, value):
-        """Setter; store de/serialized views."""
-        self._pres = V20Pres.serde(value)
-
-    async def save_error_state(
-        self,
-        session: ProfileSession,
-        *,
-        reason: str = None,
-        log_params: Mapping[str, Any] = None,
-        log_override: bool = False,
-    ):
-        """
-        Save record error state if need be; log and swallow any storage error.
-
-        Args:
-            session: The profile session to use
-            reason: A reason to add to the log
-            log_params: Additional parameters to log
-            override: Override configured logging regimen, print to stderr instead
-        """
-
-        if self._last_state == V20PresExRecord.STATE_ABANDONED:  # already done
-            return
-
-        self.state = V20PresExRecord.STATE_ABANDONED
-        if reason:
-            self.error_msg = reason
-
-        try:
-            await self.save(
-                session,
-                reason=reason,
-                log_params=log_params,
-                log_override=log_override,
-            )
-        except StorageError as err:
-            LOGGER.exception(err)
-
-    @property
-    def record_value(self) -> Mapping:
-        """Accessor for the JSON record value generated for this credential exchange."""
-        return {
-            **{
-                prop: getattr(self, prop)
-                for prop in (
-                    "connection_id",
-                    "initiator",
-                    "role",
-                    "state",
-                    "verified",
-                    "auto_present",
-                    "error_msg",
-                    "trace",
-                )
-            },
-            **{
-                prop: getattr(self, f"_{prop}").ser
-                for prop in (
-                    "pres_proposal",
-                    "pres_request",
-                    "pres",
-                )
-                if getattr(self, prop) is not None
-            },
-        }
 
     def __eq__(self, other: Any) -> bool:
         """Comparison between records."""
@@ -267,30 +191,17 @@ class V20PresExRecordSchema(BaseExchangeSchema):
             ]
         ),
     )
-    pres_proposal = fields.Nested(
-        V20PresProposalSchema(),
-        required=False,
-        description="Presentation proposal message",
+    pres_proposal = fields.Dict(
+        required=False, description="Serialized presentation proposal message"
     )
-    pres_request = fields.Nested(
-        V20PresRequestSchema(),
-        required=False,
-        description="Presentation request message",
+    pres_request = fields.Dict(
+        required=False, description="Serialized presentation request message"
     )
-    pres = fields.Nested(
-        V20PresSchema(),
+    pres = fields.Dict(
         required=False,
-        description="Presentation message",
+        description="Serialized presentation message",
     )
-    by_format = fields.Nested(
-        Schema.from_dict(
-            {
-                "pres_proposal": fields.Dict(required=False),
-                "pres_request": fields.Dict(required=False),
-                "pres": fields.Dict(required=False),
-            },
-            name="V20PresExRecordByFormatSchema",
-        ),
+    by_format = fields.Dict(
         required=False,
         description=(
             "Attachment content by format for proposal, request, and presentation"

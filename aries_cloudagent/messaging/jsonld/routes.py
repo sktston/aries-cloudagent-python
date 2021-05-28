@@ -2,7 +2,8 @@
 
 from aiohttp import web
 from aiohttp_apispec import docs, request_schema, response_schema
-from marshmallow import INCLUDE, Schema, fields
+from marshmallow import Schema, fields
+from marshmallow.utils import INCLUDE
 from pydid.doc.verification_method import VerificationMethod
 
 from ...admin.request_context import AdminRequestContext
@@ -19,36 +20,29 @@ from .error import (
 )
 
 
-class SignatureOptionsSchema(Schema):
-    """Schema for LD signature options."""
-
-    type = fields.Str(required=False)
-    verificationMethod = fields.Str(required=True)
-    proofPurpose = fields.Str(required=True)
-    challenge = fields.Str(required=False)
-    domain = fields.Str(required=False)
-
-
-class DocSchema(OpenAPISchema):
-    """Schema for LD doc to sign."""
-
-    credential = fields.Dict(
-        required=True,
-        description="Credential to sign",
-    )
-    options = fields.Nested(
-        SignatureOptionsSchema,
-        required=True,
-        description="Signature options",
-    )
-
-
 class SignRequestSchema(OpenAPISchema):
     """Request schema for signing a jsonld doc."""
 
     verkey = fields.Str(required=True, description="Verkey to use for signing")
     doc = fields.Nested(
-        DocSchema,
+        Schema.from_dict(
+            {
+                "credential": fields.Dict(
+                    required=True,
+                    description="Credential to sign",
+                ),
+                "options": fields.Nested(
+                    Schema.from_dict(
+                        {
+                            "creator": fields.Str(required=False),
+                            "verificationMethod": fields.Str(required=False),
+                            "proofPurpose": fields.Str(required=False),
+                        }
+                    ),
+                    required=True,
+                ),
+            }
+        ),
         required=True,
     )
 
@@ -88,7 +82,7 @@ async def sign(request: web.BaseRequest):
     return web.json_response(response)
 
 
-class SignedDocSchema(OpenAPISchema):
+class DocSchema(OpenAPISchema):
     """Verifiable doc schema."""
 
     class Meta:
@@ -97,10 +91,13 @@ class SignedDocSchema(OpenAPISchema):
         unknown = INCLUDE
 
     proof = fields.Nested(
-        SignatureOptionsSchema,
-        unknown=INCLUDE,
-        required=True,
-        description="Linked data proof",
+        Schema.from_dict(
+            {
+                "creator": fields.Str(required=False),
+                "verificationMethod": fields.Str(required=False),
+                "proofPurpose": fields.Str(required=False),
+            }
+        )
     )
 
 
@@ -110,7 +107,10 @@ class VerifyRequestSchema(OpenAPISchema):
     verkey = fields.Str(
         required=False, description="Verkey to use for doc verification"
     )
-    doc = fields.Nested(SignedDocSchema, required=True, description="Signed document")
+    doc = fields.Dict(
+        required=True,
+        description="Credential to verify",
+    )
 
 
 class VerifyResponseSchema(OpenAPISchema):

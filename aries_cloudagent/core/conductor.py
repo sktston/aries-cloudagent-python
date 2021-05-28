@@ -275,7 +275,9 @@ class Conductor:
                         ),
                     )
                     base_url = context.settings.get("invite_base_url")
-                    invite_url = invi_rec.invitation.to_url(base_url)
+                    invite_url = InvitationMessage.deserialize(
+                        invi_rec.invitation
+                    ).to_url(base_url)
                     print("Invitation URL:")
                     print(invite_url, flush=True)
                     del mgr
@@ -470,7 +472,8 @@ class Conductor:
                 return OutboundSendStatus.SENT_TO_SESSION
 
         if not outbound.to_session_only:
-            return await self.queue_outbound(profile, outbound, inbound)
+            await self.queue_outbound(profile, outbound, inbound)
+            return OutboundSendStatus.QUEUED_FOR_DELIVERY
 
     def handle_not_returned(self, profile: Profile, outbound: OutboundMessage):
         """Handle a message that failed delivery via an inbound session."""
@@ -487,7 +490,7 @@ class Conductor:
         profile: Profile,
         outbound: OutboundMessage,
         inbound: InboundMessage = None,
-    ) -> OutboundSendStatus:
+    ):
         """
         Queue an outbound message for transport.
 
@@ -523,15 +526,15 @@ class Conductor:
         # internal queue usually results in the message to be sent over
         # ACA-py `-ot` transport.
         if self.outbound_queue:
-            return await self._queue_external(profile, outbound)
+            await self._queue_external(profile, outbound)
         else:
-            return self._queue_internal(profile, outbound)
+            self._queue_internal(profile, outbound)
 
     async def _queue_external(
         self,
         profile: Profile,
         outbound: OutboundMessage,
-    ) -> OutboundSendStatus:
+    ):
         """Save the message to an external outbound queue."""
         async with self.outbound_queue:
             targets = (
@@ -542,30 +545,17 @@ class Conductor:
                     outbound.payload, target.endpoint
                 )
 
-            return OutboundSendStatus.SENT_TO_EXTERNAL_QUEUE
-
-    def _queue_internal(
-        self, profile: Profile, outbound: OutboundMessage
-    ) -> OutboundSendStatus:
+    def _queue_internal(self, profile: Profile, outbound: OutboundMessage):
         """Save the message to an internal outbound queue."""
         try:
             self.outbound_transport_manager.enqueue_message(profile, outbound)
-            return OutboundSendStatus.QUEUED_FOR_DELIVERY
         except OutboundDeliveryError:
             LOGGER.warning("Cannot queue message for delivery, no supported transport")
-            return self.handle_not_delivered(profile, outbound)
+            self.handle_not_delivered(profile, outbound)
 
-    def handle_not_delivered(
-        self, profile: Profile, outbound: OutboundMessage
-    ) -> OutboundSendStatus:
+    def handle_not_delivered(self, profile: Profile, outbound: OutboundMessage):
         """Handle a message that failed delivery via outbound transports."""
-        queued_for_inbound = self.inbound_transport_manager.return_undelivered(outbound)
-
-        return (
-            OutboundSendStatus.WAITING_FOR_PICKUP
-            if queued_for_inbound
-            else OutboundSendStatus.UNDELIVERABLE
-        )
+        self.inbound_transport_manager.return_undelivered(outbound)
 
     def webhook_router(
         self,

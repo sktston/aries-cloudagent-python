@@ -14,12 +14,15 @@ from marshmallow import fields
 
 from ..admin.request_context import AdminRequestContext
 from ..indy.holder import IndyHolder, IndyHolderError
-from ..indy.sdk.models.cred_precis import IndyCredInfoSchema
 from ..ledger.base import BaseLedger
 from ..ledger.error import LedgerError
 from ..messaging.models.openapi import OpenAPISchema
 from ..messaging.valid import (
     ENDPOINT,
+    INDY_CRED_DEF_ID,
+    INDY_CRED_REV_ID,
+    INDY_REV_REG_ID,
+    INDY_SCHEMA_ID,
     INDY_WQL,
     NUM_STR_NATURAL,
     NUM_STR_WHOLE,
@@ -45,10 +48,31 @@ class AttributeMimeTypesResultSchema(OpenAPISchema):
     )
 
 
-class CredInfoListSchema(OpenAPISchema):
+class CredBriefSchema(OpenAPISchema):
+    """Result schema with credential brief for credential query."""
+
+    referent = fields.Str(description="Credential referent", example=UUIDFour.EXAMPLE)
+    attrs = fields.Dict(
+        keys=fields.Str(description="Attribute name"),
+        values=fields.Str(description="Attribute value"),
+        description="Attribute names mapped to their raw values",
+    )
+    schema_id = fields.Str(description="Schema identifier", **INDY_SCHEMA_ID)
+    cred_def_id = fields.Str(
+        description="Credential definition identifier", **INDY_CRED_DEF_ID
+    )
+    rev_reg_id = fields.Str(
+        description="Revocation registry identifier", **INDY_REV_REG_ID
+    )
+    cred_rev_id = fields.Str(
+        description="Credential revocation identifier", **INDY_CRED_REV_ID
+    )
+
+
+class CredBriefListSchema(OpenAPISchema):
     """Result schema for credential query."""
 
-    results = fields.List(fields.Nested(IndyCredInfoSchema()))
+    results = fields.List(fields.Nested(CredBriefSchema()))
 
 
 class CredentialsListQueryStringSchema(OpenAPISchema):
@@ -128,7 +152,7 @@ class VCRecordListSchema(OpenAPISchema):
     results = fields.List(fields.Nested(VCRecordSchema()))
 
 
-class HolderCredIdMatchInfoSchema(OpenAPISchema):
+class CredIdMatchInfoSchema(OpenAPISchema):
     """Path parameters and validators for request taking credential id."""
 
     credential_id = fields.Str(
@@ -159,8 +183,8 @@ class CredRevokedResultSchema(OpenAPISchema):
 
 
 @docs(tags=["credentials"], summary="Fetch credential from wallet by id")
-@match_info_schema(HolderCredIdMatchInfoSchema())
-@response_schema(IndyCredInfoSchema(), 200, description="")
+@match_info_schema(CredIdMatchInfoSchema())
+@response_schema(CredBriefSchema(), 200, description="")
 async def credentials_get(request: web.BaseRequest):
     """
     Request handler for retrieving credential.
@@ -169,7 +193,7 @@ async def credentials_get(request: web.BaseRequest):
         request: aiohttp request object
 
     Returns:
-        The credential info
+        The credential brief
 
     """
     context: AdminRequestContext = request["context"]
@@ -187,7 +211,7 @@ async def credentials_get(request: web.BaseRequest):
 
 
 @docs(tags=["credentials"], summary="Query credential revocation status by id")
-@match_info_schema(HolderCredIdMatchInfoSchema())
+@match_info_schema(CredIdMatchInfoSchema())
 @querystring_schema(CredRevokedQueryStringSchema())
 @response_schema(CredRevokedResultSchema(), 200, description="")
 async def credentials_revoked(request: web.BaseRequest):
@@ -232,7 +256,7 @@ async def credentials_revoked(request: web.BaseRequest):
 
 
 @docs(tags=["credentials"], summary="Get attribute MIME types from wallet")
-@match_info_schema(HolderCredIdMatchInfoSchema())
+@match_info_schema(CredIdMatchInfoSchema())
 @response_schema(AttributeMimeTypesResultSchema(), 200, description="")
 async def credentials_attr_mime_types_get(request: web.BaseRequest):
     """
@@ -254,7 +278,7 @@ async def credentials_attr_mime_types_get(request: web.BaseRequest):
 
 
 @docs(tags=["credentials"], summary="Remove credential from wallet by id")
-@match_info_schema(HolderCredIdMatchInfoSchema())
+@match_info_schema(CredIdMatchInfoSchema())
 @response_schema(HolderModuleResponseSchema(), description="")
 async def credentials_remove(request: web.BaseRequest):
     """
@@ -285,7 +309,7 @@ async def credentials_remove(request: web.BaseRequest):
     summary="Fetch credentials from wallet",
 )
 @querystring_schema(CredentialsListQueryStringSchema())
-@response_schema(CredInfoListSchema(), 200, description="")
+@response_schema(CredBriefListSchema(), 200, description="")
 async def credentials_list(request: web.BaseRequest):
     """
     Request handler for searching credential records.
@@ -294,7 +318,7 @@ async def credentials_list(request: web.BaseRequest):
         request: aiohttp request object
 
     Returns:
-        The credential info list response
+        The credential list response
 
     """
     context: AdminRequestContext = request["context"]
@@ -323,7 +347,7 @@ async def credentials_list(request: web.BaseRequest):
     tags=["credentials"],
     summary="Fetch W3C credential from wallet by id",
 )
-@match_info_schema(HolderCredIdMatchInfoSchema())
+@match_info_schema(CredIdMatchInfoSchema())
 @response_schema(VCRecordSchema(), 200, description="")
 async def w3c_cred_get(request: web.BaseRequest):
     """
@@ -355,7 +379,7 @@ async def w3c_cred_get(request: web.BaseRequest):
     tags=["credentials"],
     summary="Remove W3C credential from wallet by id",
 )
-@match_info_schema(HolderCredIdMatchInfoSchema())
+@match_info_schema(CredIdMatchInfoSchema())
 @response_schema(HolderModuleResponseSchema(), 200, description="")
 async def w3c_cred_remove(request: web.BaseRequest):
     """

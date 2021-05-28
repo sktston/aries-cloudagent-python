@@ -25,7 +25,6 @@ from ...coordinate_mediation.v1_0.manager import MediationManager
 from ...out_of_band.v1_0.messages.invitation import (
     InvitationMessage as OOBInvitationMessage,
 )
-from ...out_of_band.v1_0.messages.service import Service as OOBService
 
 from .messages.complete import DIDXComplete
 from .messages.request import DIDXRequest
@@ -84,18 +83,20 @@ class DIDXManager(BaseConnectionManager):
             The new `ConnRecord` instance
 
         """
-        if not invitation.services:
-            raise DIDXManagerError(
-                "Invitation must contain service blocks or service DIDs"
-            )
-        else:
-            for s in invitation.services:
-                if isinstance(s, OOBService):
-                    if not s.recipient_keys or not s.service_endpoint:
-                        raise DIDXManagerError(
-                            "All service blocks in invitation with no service DIDs "
-                            "must contain recipient key(s) and service endpoint(s)"
-                        )
+        if not invitation.service_dids:
+            if invitation.service_blocks:
+                if not all(
+                    s.recipient_keys and s.service_endpoint
+                    for s in invitation.service_blocks
+                ):
+                    raise DIDXManagerError(
+                        "All service blocks in invitation with no service DIDs "
+                        "must contain recipient key(s) and service endpoint(s)"
+                    )
+            else:
+                raise DIDXManagerError(
+                    "Invitation must contain service blocks or service DIDs"
+                )
 
         accept = (
             ConnRecord.ACCEPT_AUTO
@@ -109,12 +110,14 @@ class DIDXManager(BaseConnectionManager):
             else ConnRecord.ACCEPT_MANUAL
         )
 
-        service_item = invitation.services[0]
         # Create connection record
         conn_rec = ConnRecord(
             invitation_key=(
-                DIDKey.from_did(service_item.recipient_keys[0]).public_key_b58
-                if isinstance(service_item, OOBService)
+                # invitation.service_blocks[0].recipient_keys[0]
+                DIDKey.from_did(
+                    invitation.service_blocks[0].recipient_keys[0]
+                ).public_key_b58
+                if invitation.service_blocks
                 else None
             ),
             invitation_msg_id=invitation._id,
@@ -160,9 +163,9 @@ class DIDXManager(BaseConnectionManager):
         my_label: str = None,
         my_endpoint: str = None,
         mediation_id: str = None,
-    ) -> ConnRecord:
+    ) -> DIDXRequest:
         """
-        Create and send a request against a public DID only (no explicit invitation).
+        Create a request against a public DID only (no explicit invitation).
 
         Args:
             their_public_did: public DID to which to request a connection
@@ -171,7 +174,7 @@ class DIDXManager(BaseConnectionManager):
             mediation_id: record id for mediation with routing_keys, service endpoint
 
         Returns:
-            The new `ConnRecord` instance
+            DID exchange request
 
         """
 
@@ -182,24 +185,17 @@ class DIDXManager(BaseConnectionManager):
             their_role=ConnRecord.Role.RESPONDER.rfc23,
             invitation_key=None,
             invitation_msg_id=None,
+            state=ConnRecord.State.REQUEST.rfc23,
             accept=None,
             alias=my_label,
             their_public_did=their_public_did,
         )
-        request = await self.create_request(  # saves and updates conn_rec
+        return await self.create_request(  # saves and updates conn_rec
             conn_rec=conn_rec,
             my_label=my_label,
             my_endpoint=my_endpoint,
             mediation_id=mediation_id,
         )
-        conn_rec.request_id = request._id
-        conn_rec.state = ConnRecord.State.REQUEST.rfc23
-        await conn_rec.save(self._session, reason="Created connection request")
-        responder = self._session.inject(BaseResponder, required=False)
-        if responder:
-            await responder.send(request, connection_id=conn_rec.connection_id)
-
-        return conn_rec
 
     async def create_request(
         self,

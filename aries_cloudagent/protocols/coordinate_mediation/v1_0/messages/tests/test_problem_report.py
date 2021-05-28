@@ -1,16 +1,12 @@
 """Test Problem Report Message."""
 import pytest
 
+from asynctest import TestCase as AsyncTestCase
 from unittest import mock, TestCase
 
 from ......messaging.models.base import BaseModelError
 
-from ..problem_report import (
-    CMProblemReport,
-    CMProblemReportSchema,
-    ProblemReportReason,
-    ValidationError,
-)
+from ..problem_report import CMProblemReport, ProblemReportReason
 
 
 class TestCMProblemReportMessage(TestCase):
@@ -33,9 +29,3 @@ class TestCMProblemReportMessage(TestCase):
         model_instance.description["code"] = "extraneous code"
         with pytest.raises(BaseModelError):
             CMProblemReport.deserialize(model_instance)
-
-    def test_validate_x(self):
-        """Exercise validation requirements."""
-        schema = CMProblemReportSchema()
-        with pytest.raises(ValidationError):
-            schema.validate_fields({})

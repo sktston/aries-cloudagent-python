@@ -34,7 +34,7 @@ class IntroStartQueryStringSchema(OpenAPISchema):
     )
 
 
-class IntroConnIdMatchInfoSchema(OpenAPISchema):
+class ConnIdMatchInfoSchema(OpenAPISchema):
     """Path parameters and validators for request taking connection id."""
 
     conn_id = fields.Str(
@@ -46,7 +46,7 @@ class IntroConnIdMatchInfoSchema(OpenAPISchema):
     tags=["introduction"],
     summary="Start an introduction between two connections",
 )
-@match_info_schema(IntroConnIdMatchInfoSchema())
+@match_info_schema(ConnIdMatchInfoSchema())
 @querystring_schema(IntroStartQueryStringSchema())
 @response_schema(IntroModuleResponseSchema, description="")
 async def introduction_start(request: web.BaseRequest):

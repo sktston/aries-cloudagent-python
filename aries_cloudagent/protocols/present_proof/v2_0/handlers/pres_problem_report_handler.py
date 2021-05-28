@@ -1,8 +1,7 @@
 """Presentation problem report message handler."""
 
-from .....messaging.base_handler import BaseHandler
+from .....messaging.base_handler import BaseHandler, BaseResponder
 from .....messaging.request_context import RequestContext
-from .....messaging.responder import BaseResponder
 from .....storage.error import StorageError, StorageNotFoundError
 
 from ..manager import V20PresManager

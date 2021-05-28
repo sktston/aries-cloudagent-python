@@ -10,9 +10,6 @@ import asyncio
 from ......cache.base import BaseCache
 from ......indy.issuer import IndyIssuer, IndyIssuerRevocationRegistryFullError
 from ......indy.holder import IndyHolder, IndyHolderError
-from ......indy.sdk.models.cred import IndyCredentialSchema
-from ......indy.sdk.models.cred_request import IndyCredRequestSchema
-from ......indy.sdk.models.cred_abstract import IndyCredAbstractSchema
 from ......ledger.base import BaseLedger
 from ......messaging.credential_definitions.util import (
     CRED_DEF_SENT_RECORD_TYPE,
@@ -39,8 +36,11 @@ from ...messages.cred_request import V20CredRequest
 from ...messages.cred_issue import V20CredIssue
 from ...models.cred_ex_record import V20CredExRecord
 from ...models.detail.indy import V20CredExRecordIndy
-
 from ..handler import CredFormatAttachment, V20CredFormatError, V20CredFormatHandler
+
+from .models.cred_request import IndyCredRequestSchema
+from .models.cred_abstract import IndyCredAbstractSchema
+from .models.cred import IndyCredentialSchema
 
 LOGGER = logging.getLogger(__name__)
 
@@ -122,7 +122,9 @@ class IndyCredFormatHandler(V20CredFormatHandler):
         ledger = self.profile.inject(BaseLedger)
         cache = self.profile.inject(BaseCache, required=False)
 
-        cred_proposal_message = cred_ex_record.cred_proposal
+        cred_proposal_message = V20CredProposal.deserialize(
+            cred_ex_record.cred_proposal
+        )
 
         cred_def_id = await self._match_sent_cred_def_id(
             cred_proposal_message.attachment(self.format)
@@ -177,7 +179,9 @@ class IndyCredFormatHandler(V20CredFormatHandler):
         await self._check_uniqueness(cred_ex_record.cred_ex_id)
 
         holder_did = request_data.get("holder_did") if request_data else None
-        cred_offer = cred_ex_record.cred_offer.attachment(self.format)
+        cred_offer = V20CredOffer.deserialize(cred_ex_record.cred_offer).attachment(
+            self.format
+        )
 
         if "nonce" not in cred_offer:
             raise V20CredFormatError("Missing nonce in credential offer")
@@ -238,8 +242,12 @@ class IndyCredFormatHandler(V20CredFormatHandler):
         """Issue indy credential."""
         await self._check_uniqueness(cred_ex_record.cred_ex_id)
 
-        cred_offer = cred_ex_record.cred_offer.attachment(self.format)
-        cred_request = cred_ex_record.cred_request.attachment(self.format)
+        cred_offer = V20CredOffer.deserialize(cred_ex_record.cred_offer).attachment(
+            self.format
+        )
+        cred_request = V20CredRequest.deserialize(
+            cred_ex_record.cred_request
+        ).attachment(self.format)
 
         schema_id = cred_offer["schema_id"]
         cred_def_id = cred_offer["cred_def_id"]
@@ -312,9 +320,9 @@ class IndyCredFormatHandler(V20CredFormatHandler):
                 )
             del revoc
 
-        cred_values = cred_ex_record.cred_offer.credential_preview.attr_dict(
-            decode=False
-        )
+        cred_values = V20CredOffer.deserialize(
+            cred_ex_record.cred_offer
+        ).credential_preview.attr_dict(decode=False)
         issuer = self.profile.inject(IndyIssuer)
         try:
             (cred_json, cred_rev_id,) = await issuer.create_credential(
@@ -393,7 +401,9 @@ class IndyCredFormatHandler(V20CredFormatHandler):
         self, cred_ex_record: V20CredExRecord, cred_id: str = None
     ) -> None:
         """Store indy credential."""
-        cred = cred_ex_record.cred_issue.attachment(self.format)
+        cred = V20CredIssue.deserialize(cred_ex_record.cred_issue).attachment(
+            self.format
+        )
 
         rev_reg_def = None
         ledger = self.profile.inject(BaseLedger)
@@ -403,7 +413,7 @@ class IndyCredFormatHandler(V20CredFormatHandler):
                 rev_reg_def = await ledger.get_revoc_reg_def(cred["rev_reg_id"])
 
         holder = self.profile.inject(IndyHolder)
-        cred_offer_message = cred_ex_record.cred_offer
+        cred_offer_message = V20CredOffer.deserialize(cred_ex_record.cred_offer)
         mime_types = None
         if cred_offer_message and cred_offer_message.credential_preview:
             mime_types = cred_offer_message.credential_preview.mime_types() or None
