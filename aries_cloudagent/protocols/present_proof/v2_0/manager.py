@@ -558,6 +558,11 @@ class V20PresManager:
                 req_pred = Predicate.get(proof_req_pred_spec["p_type"])
                 req_value = proof_req_pred_spec["p_value"]
                 req_restrictions = proof_req_pred_spec.get("restrictions", {})
+                for req_restriction in req_restrictions:
+                    for k in [k for k in req_restriction]:  # cannot modify en passant
+                        if k.startswith("attr::"):
+                            req_restriction.pop(k)  # let indy-sdk reject mismatch here
+
                 sub_proof_index = pred_spec["sub_proof_index"]
                 for ge_proof in proof["proof"]["proofs"][sub_proof_index][
                     "primary_proof"
@@ -762,32 +767,6 @@ class V20PresManager:
             await pres_ex_record.save(session, reason="receive v2.0 presentation ack")
 
         return pres_ex_record
-
-    async def create_problem_report(
-        self,
-        pres_ex_record: V20PresExRecord,
-        description: str,
-    ):
-        """
-        Update pres ex record; create and return problem report.
-
-        Returns:
-            problem report
-
-        """
-        pres_ex_record.state = V20PresExRecord.STATE_ABANDONED
-        async with self._profile.session() as session:
-            await pres_ex_record.save(session, reason="created problem report")
-
-        report = V20PresProblemReport(
-            description={
-                "en": description,
-                "code": ProblemReportReason.ABANDONED.value,
-            }
-        )
-        report.assign_thread_id(pres_ex_record.thread_id)
-
-        return report
 
     async def receive_problem_report(
         self, message: V20PresProblemReport, connection_id: str
