@@ -17,6 +17,7 @@ from marshmallow import fields
 
 from ...admin.request_context import AdminRequestContext
 from ...indy.issuer import IndyIssuer
+from ...indy.sdk.models.cred_def import CredentialDefinitionSchema
 from ...ledger.base import BaseLedger
 from ...ledger.error import LedgerError
 from ...protocols.endorse_transaction.v1_0.manager import TransactionManager
@@ -30,10 +31,16 @@ from ...storage.error import StorageError
 from ...tails.base import BaseTailsServer
 
 from ..models.openapi import OpenAPISchema
-from ..valid import INDY_CRED_DEF_ID, INDY_REV_REG_SIZE, INDY_SCHEMA_ID, INDY_VERSION
+from ..valid import INDY_CRED_DEF_ID, INDY_REV_REG_SIZE, INDY_SCHEMA_ID
 
 
 from .util import CredDefQueryStringSchema, CRED_DEF_TAGS, CRED_DEF_SENT_RECORD_TYPE
+
+
+from ..valid import UUIDFour
+from ...connections.models.conn_record import ConnRecord
+from ...storage.error import StorageNotFoundError
+from ..models.base import BaseModelError
 
 
 class CredentialDefinitionSendRequestSchema(OpenAPISchema):
@@ -80,34 +87,6 @@ class TxnOrCredentialDefinitionSendResultSchema(OpenAPISchema):
     )
 
 
-class CredentialDefinitionSchema(OpenAPISchema):
-    """Credential definition schema."""
-
-    ver = fields.Str(description="Node protocol version", **INDY_VERSION)
-    ident = fields.Str(
-        description="Credential definition identifier",
-        data_key="id",
-        **INDY_CRED_DEF_ID,
-    )
-    schemaId = fields.Str(
-        description="Schema identifier within credential definition identifier",
-        example=":".join(INDY_CRED_DEF_ID["example"].split(":")[3:-1]),  # long or short
-    )
-    typ = fields.Constant(
-        constant="CL",
-        description="Signature type: CL for Camenisch-Lysyanskaya",
-        data_key="type",
-        example="CL",
-    )
-    tag = fields.Str(
-        description="Tag within credential definition identifier",
-        example=INDY_CRED_DEF_ID["example"].split(":")[-1],
-    )
-    value = fields.Dict(
-        description="Credential definition primary and revocation values"
-    )
-
-
 class CredentialDefinitionGetResultSchema(OpenAPISchema):
     """Result schema for schema get request."""
 
@@ -132,21 +111,20 @@ class CredDefIdMatchInfoSchema(OpenAPISchema):
     )
 
 
-class AutoEndorseOptionSchema(OpenAPISchema):
-    """Class for user to input whether to auto-endorse the transaction or not."""
+class CreateCredDefTxnForEndorserOptionSchema(OpenAPISchema):
+    """Class for user to input whether to create a transaction for endorser or not."""
 
-    auto_endorse = fields.Boolean(
-        description="Auto-endorse Transaction",
+    create_transaction_for_endorser = fields.Boolean(
+        description="Create Transaction For Endorser's signature",
         required=False,
     )
 
 
-class EndorserDIDOptionSchema(OpenAPISchema):
-    """Class for user to input the DID associated with the requested endorser."""
+class CredDefConnIdMatchInfoSchema(OpenAPISchema):
+    """Path parameters and validators for request taking connection id."""
 
-    endorser_did = fields.Str(
-        description="Endorser DID",
-        required=False,
+    conn_id = fields.Str(
+        description="Connection identifier", required=False, example=UUIDFour.EXAMPLE
     )
 
 
@@ -155,8 +133,8 @@ class EndorserDIDOptionSchema(OpenAPISchema):
     summary="Sends a credential definition to the ledger",
 )
 @request_schema(CredentialDefinitionSendRequestSchema())
-@querystring_schema(AutoEndorseOptionSchema())
-@querystring_schema(EndorserDIDOptionSchema())
+@querystring_schema(CreateCredDefTxnForEndorserOptionSchema())
+@querystring_schema(CredDefConnIdMatchInfoSchema())
 @response_schema(TxnOrCredentialDefinitionSendResultSchema(), 200, description="")
 async def credential_definitions_send_credential_definition(request: web.BaseRequest):
     """
@@ -170,8 +148,12 @@ async def credential_definitions_send_credential_definition(request: web.BaseReq
 
     """
     context: AdminRequestContext = request["context"]
-    auto_endorse = json.loads(request.query.get("auto_endorse", "true"))
-    endorser_did = request.query.get("endorser_did", None)
+    create_transaction_for_endorser = json.loads(
+        request.query.get("create_transaction_for_endorser", "false")
+    )
+    write_ledger = not create_transaction_for_endorser
+    endorser_did = None
+    connection_id = request.query.get("conn_id")
 
     body = await request.json()
 
@@ -179,6 +161,32 @@ async def credential_definitions_send_credential_definition(request: web.BaseReq
     support_revocation = bool(body.get("support_revocation"))
     tag = body.get("tag")
     rev_reg_size = body.get("revocation_registry_size")
+
+    if not write_ledger:
+
+        try:
+            async with context.session() as session:
+                connection_record = await ConnRecord.retrieve_by_id(
+                    session, connection_id
+                )
+        except StorageNotFoundError as err:
+            raise web.HTTPNotFound(reason=err.roll_up) from err
+        except BaseModelError as err:
+            raise web.HTTPBadRequest(reason=err.roll_up) from err
+
+        session = await context.session()
+        endorser_info = await connection_record.metadata_get(session, "endorser_info")
+        if not endorser_info:
+            raise web.HTTPForbidden(
+                reason="Endorser Info is not set up in "
+                "connection metadata for this connection record"
+            )
+        if "endorser_did" not in endorser_info.keys():
+            raise web.HTTPForbidden(
+                reason=' "endorser_did" is not set in "endorser_info"'
+                " in connection metadata for this connection record"
+            )
+        endorser_did = endorser_info["endorser_did"]
 
     ledger = context.inject(BaseLedger, required=False)
     if not ledger:
@@ -197,7 +205,7 @@ async def credential_definitions_send_credential_definition(request: web.BaseReq
                     signature_type=None,
                     tag=tag,
                     support_revocation=support_revocation,
-                    write_ledger=auto_endorse,
+                    write_ledger=write_ledger,
                     endorser_did=endorser_did,
                 )
             )
@@ -258,7 +266,7 @@ async def credential_definitions_send_credential_definition(request: web.BaseReq
         except RevocationError as e:
             raise web.HTTPBadRequest(reason=e.message) from e
 
-    if auto_endorse:
+    if not create_transaction_for_endorser:
         return web.json_response({"sent": {"credential_definition_id": cred_def_id}})
 
     else:
@@ -267,8 +275,7 @@ async def credential_definitions_send_credential_definition(request: web.BaseReq
         transaction_mgr = TransactionManager(session)
         try:
             transaction = await transaction_mgr.create_record(
-                messages_attach=cred_def["signed_txn"],
-                expires_time="1597708800",
+                messages_attach=cred_def["signed_txn"], connection_id=connection_id
             )
         except StorageError as err:
             raise web.HTTPBadRequest(reason=err.roll_up) from err

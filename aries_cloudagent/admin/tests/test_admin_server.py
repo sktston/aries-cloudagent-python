@@ -1,4 +1,5 @@
 import json
+import pytest
 
 from aiohttp import ClientSession, DummyCookieJar, TCPConnector, web
 from aiohttp.test_utils import unused_port
@@ -8,6 +9,7 @@ from asynctest import mock as async_mock
 
 from ...config.default_context import DefaultContextBuilder
 from ...config.injection_context import InjectionContext
+from ...core.event_bus import Event
 from ...core.in_memory import InMemoryProfile
 from ...core.protocol_registry import ProtocolRegistry
 from ...transport.outbound.message import OutboundMessage
@@ -16,39 +18,6 @@ from ...utils.task_queue import TaskQueue
 
 from .. import server as test_module
 from ..server import AdminServer, AdminSetupError
-
-
-class TestAdminResponder(AsyncTestCase):
-    async def test_admin_responder(self):
-        admin_responder = test_module.AdminResponder(
-            None, async_mock.CoroutineMock(), async_mock.CoroutineMock()
-        )
-
-        assert admin_responder.send_fn is admin_responder._send
-        assert admin_responder.webhook_fn is admin_responder._webhook
-
-        message = test_module.OutboundMessage(payload="hello")
-        await admin_responder.send_outbound(message)
-        assert admin_responder._send.called_once_with(None, message)
-
-        await admin_responder.send_webhook("topic", {"payload": "hello"})
-        assert admin_responder._webhook.called_once_with("topic", {"outbound": "hello"})
-
-
-class TestWebhookTarget(AsyncTestCase):
-    async def test_webhook_target(self):
-        webhook_target = test_module.WebhookTarget(
-            endpoint="localhost:8888",
-            topic_filter=["birthdays", "animal videos"],
-            max_attempts=None,
-        )
-        assert webhook_target.topic_filter == {"birthdays", "animal videos"}
-
-        webhook_target.topic_filter = []
-        assert webhook_target.topic_filter is None
-
-        webhook_target.topic_filter = ["duct cleaning", "*"]
-        assert webhook_target.topic_filter is None
 
 
 class TestAdminServer(AsyncTestCase):
@@ -404,7 +373,7 @@ class TestAdminServer(AsyncTestCase):
                     "wallet.key",
                     "wallet.rekey",
                     "wallet.seed",
-                    "wallet.storage.creds",
+                    "wallet.storage_creds",
                 ]
             )
             assert config["admin.webhook_urls"] == [
@@ -467,3 +436,25 @@ class TestAdminServer(AsyncTestCase):
         ) as response:
             assert response.status == 503
         await server.stop()
+
+
+@pytest.fixture
+async def server():
+    test_class = TestAdminServer()
+    await test_class.setUp()
+    yield test_class.get_admin_server()
+    await test_class.tearDown()
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    "event_topic, webhook_topic",
+    [("acapy::record::topic", "topic"), ("acapy::record::topic::state", "topic")],
+)
+async def test_on_record_event(server, event_topic, webhook_topic):
+    profile = InMemoryProfile.test_profile()
+    with async_mock.patch.object(
+        server, "send_webhook", async_mock.CoroutineMock()
+    ) as mock_send_webhook:
+        await server._on_record_event(profile, Event(event_topic, None))
+        mock_send_webhook.assert_called_once_with(profile, webhook_topic, None)

@@ -1,21 +1,30 @@
+import json
 import uuid
 
 from aiohttp import web
-from asynctest import TestCase as AsyncTestCase
 from asynctest import mock as async_mock
+from asynctest import TestCase as AsyncTestCase
 
 from .....cache.base import BaseCache
 from .....cache.in_memory import InMemoryCache
 from .....connections.models.conn_record import ConnRecord
 from .....core.in_memory import InMemoryProfile
+from .....ledger.base import BaseLedger
 from .....storage.error import StorageNotFoundError
 
 from ..manager import TransactionManager, TransactionManagerError
-from ..models.transaction_record import TransactionRecord
 from ..messages.messages_attach import MessagesAttach
+from ..messages.transaction_acknowledgement import TransactionAcknowledgement
+from ..messages.transaction_request import TransactionRequest
+from ..models.transaction_record import TransactionRecord
 from ..transaction_jobs import TransactionJob
 
-from ..messages.transaction_request import TransactionRequest
+
+TEST_DID = "LjgpST2rjsoxYegQDRm7EL"
+SCHEMA_NAME = "bc-reg"
+SCHEMA_TXN = 12
+SCHEMA_ID = f"{TEST_DID}:2:{SCHEMA_NAME}:1.0"
+CRED_DEF_ID = f"{TEST_DID}:3:CL:12:tag1"
 
 
 class TestTransactionManager(AsyncTestCase):
@@ -50,7 +59,7 @@ class TestTransactionManager(AsyncTestCase):
             }}
         }}"""
 
-        self.test_expires_time = "1597708800"
+        self.test_expires_time = "2021-03-29T05:22:19Z"
         self.test_connection_id = "3fa85f64-5717-4562-b3fc-2c963f66afa6"
         self.test_receivers_connection_id = "3fa85f64-5717-4562-b3fc-2c963f66afa7"
         self.test_author_transaction_id = "3fa85f64-5717-4562-b3fc-2c963f66afa7"
@@ -97,6 +106,9 @@ class TestTransactionManager(AsyncTestCase):
         self.test_endorser_verkey = "3Dn1SJNPaCXcvvJvSbsFWP2xaCjMom3can8CQNhWrTRx"
         self.test_refuser_did = "AGDEjaMunDtFtBVrn1qPKQ"
 
+        self.ledger = async_mock.create_autospec(BaseLedger)
+        self.session.context.injector.bind_instance(BaseLedger, self.ledger)
+
         self.manager = TransactionManager(self.session)
 
         assert self.manager.session
@@ -112,11 +124,10 @@ class TestTransactionManager(AsyncTestCase):
         ) as save_record:
             transaction_record = await self.manager.create_record(
                 messages_attach=self.test_messages_attach,
-                expires_time=self.test_expires_time,
+                connection_id=self.test_connection_id,
             )
             save_record.assert_called_once()
 
-            assert transaction_record.timing["expires_time"] == self.test_expires_time
             assert (
                 transaction_record.formats[0]["attach_id"]
                 == transaction_record.messages_attach[0]["@id"]
@@ -155,19 +166,17 @@ class TestTransactionManager(AsyncTestCase):
     async def test_create_request_bad_state(self):
         transaction_record = await self.manager.create_record(
             messages_attach=self.test_messages_attach,
-            expires_time=self.test_expires_time,
+            connection_id=self.test_connection_id,
         )
         transaction_record.state = TransactionRecord.STATE_TRANSACTION_ENDORSED
 
         with self.assertRaises(TransactionManagerError):
-            await self.manager.create_request(
-                transaction=transaction_record, connection_id=self.test_connection_id
-            )
+            await self.manager.create_request(transaction=transaction_record)
 
     async def test_create_request(self):
         transaction_record = await self.manager.create_record(
             messages_attach=self.test_messages_attach,
-            expires_time=self.test_expires_time,
+            connection_id=self.test_connection_id,
         )
 
         with async_mock.patch.object(
@@ -177,7 +186,8 @@ class TestTransactionManager(AsyncTestCase):
                 transaction_record,
                 transaction_request,
             ) = await self.manager.create_request(
-                transaction_record, self.test_connection_id
+                transaction_record,
+                expires_time=self.test_expires_time,
             )
             save_record.assert_called_once()
 
@@ -191,6 +201,7 @@ class TestTransactionManager(AsyncTestCase):
         }
         assert transaction_record.state == TransactionRecord.STATE_REQUEST_SENT
         assert transaction_record.connection_id == self.test_connection_id
+        assert transaction_record.timing["expires_time"] == self.test_expires_time
 
         assert transaction_request.transaction_id == transaction_record._id
         assert (
@@ -242,7 +253,7 @@ class TestTransactionManager(AsyncTestCase):
     async def test_create_endorse_response_bad_state(self):
         transaction_record = await self.manager.create_record(
             messages_attach=self.test_messages_attach,
-            expires_time=self.test_expires_time,
+            connection_id=self.test_connection_id,
         )
         transaction_record.state = TransactionRecord.STATE_TRANSACTION_ENDORSED
 
@@ -259,7 +270,7 @@ class TestTransactionManager(AsyncTestCase):
     async def test_create_endorse_response(self):
         transaction_record = await self.manager.create_record(
             messages_attach=self.test_messages_attach,
-            expires_time=self.test_expires_time,
+            connection_id=self.test_connection_id,
         )
         transaction_record.state = TransactionRecord.STATE_REQUEST_RECEIVED
         transaction_record.thread_id = self.test_author_transaction_id
@@ -318,7 +329,7 @@ class TestTransactionManager(AsyncTestCase):
     async def test_receive_endorse_response(self):
         transaction_record = await self.manager.create_record(
             messages_attach=self.test_messages_attach,
-            expires_time=self.test_expires_time,
+            connection_id=self.test_connection_id,
         )
         self.test_author_transaction_id = transaction_record._id
 
@@ -362,22 +373,52 @@ class TestTransactionManager(AsyncTestCase):
     async def test_complete_transaction(self):
         transaction_record = await self.manager.create_record(
             messages_attach=self.test_messages_attach,
-            expires_time=self.test_expires_time,
+            connection_id=self.test_connection_id,
         )
+
+        self.ledger.get_indy_storage = async_mock.MagicMock(
+            return_value=async_mock.MagicMock(add_record=async_mock.CoroutineMock())
+        )
+        self.ledger.txn_submit = async_mock.CoroutineMock(
+            return_value=json.dumps(
+                {
+                    "result": {
+                        "txn": {"type": "101", "metadata": {"from": TEST_DID}},
+                        "txnMetadata": {"txnId": SCHEMA_ID},
+                    }
+                }
+            )
+        )
+
         with async_mock.patch.object(
             TransactionRecord, "save", autospec=True
-        ) as save_record:
-            transaction_record = await self.manager.complete_transaction(
-                transaction_record
+        ) as save_record, async_mock.patch.object(
+            ConnRecord, "retrieve_by_id"
+        ) as mock_conn_rec_retrieve:
+
+            mock_conn_rec_retrieve.return_value = async_mock.MagicMock(
+                metadata_get=async_mock.CoroutineMock(
+                    return_value={
+                        "transaction_their_job": (
+                            TransactionJob.TRANSACTION_ENDORSER.name
+                        ),
+                        "transaction_my_job": (TransactionJob.TRANSACTION_AUTHOR.name),
+                    }
+                )
             )
+
+            (
+                transaction_record,
+                transaction_acknowledgement_message,
+            ) = await self.manager.complete_transaction(transaction_record)
             save_record.assert_called_once()
 
-        assert transaction_record.state == TransactionRecord.STATE_TRANSACTION_COMPLETED
+        assert transaction_record.state == TransactionRecord.STATE_TRANSACTION_ACKED
 
     async def test_create_refuse_response_bad_state(self):
         transaction_record = await self.manager.create_record(
             messages_attach=self.test_messages_attach,
-            expires_time=self.test_expires_time,
+            connection_id=self.test_connection_id,
         )
         transaction_record.state = TransactionRecord.STATE_TRANSACTION_ENDORSED
 
@@ -391,7 +432,7 @@ class TestTransactionManager(AsyncTestCase):
     async def test_create_refuse_response(self):
         transaction_record = await self.manager.create_record(
             messages_attach=self.test_messages_attach,
-            expires_time=self.test_expires_time,
+            connection_id=self.test_connection_id,
         )
         transaction_record.state = TransactionRecord.STATE_REQUEST_RECEIVED
         transaction_record.thread_id = self.test_author_transaction_id
@@ -439,7 +480,7 @@ class TestTransactionManager(AsyncTestCase):
     async def test_receive_refuse_response(self):
         transaction_record = await self.manager.create_record(
             messages_attach=self.test_messages_attach,
-            expires_time=self.test_expires_time,
+            connection_id=self.test_connection_id,
         )
         self.test_author_transaction_id = transaction_record._id
 
@@ -476,7 +517,7 @@ class TestTransactionManager(AsyncTestCase):
     async def test_cancel_transaction_bad_state(self):
         transaction_record = await self.manager.create_record(
             messages_attach=self.test_messages_attach,
-            expires_time=self.test_expires_time,
+            connection_id=self.test_connection_id,
         )
         transaction_record.state = TransactionRecord.STATE_TRANSACTION_ENDORSED
 
@@ -489,7 +530,7 @@ class TestTransactionManager(AsyncTestCase):
     async def test_cancel_transaction(self):
         transaction_record = await self.manager.create_record(
             messages_attach=self.test_messages_attach,
-            expires_time=self.test_expires_time,
+            connection_id=self.test_connection_id,
         )
         transaction_record.state = TransactionRecord.STATE_REQUEST_SENT
         transaction_record.thread_id = self.test_endorser_transaction_id
@@ -519,14 +560,12 @@ class TestTransactionManager(AsyncTestCase):
     async def test_receive_cancel_transaction(self):
         author_transaction_record = await self.manager.create_record(
             messages_attach=self.test_messages_attach,
-            expires_time=self.test_expires_time,
+            connection_id=self.test_connection_id,
         )
         (
             author_transaction_record,
             author_transaction_request,
-        ) = await self.manager.create_request(
-            author_transaction_record, self.test_connection_id
-        )
+        ) = await self.manager.create_request(author_transaction_record)
 
         endorser_transaction_record = await self.manager.receive_request(
             author_transaction_request, self.test_receivers_connection_id
@@ -552,7 +591,7 @@ class TestTransactionManager(AsyncTestCase):
     async def test_transaction_resend_bad_state(self):
         transaction_record = await self.manager.create_record(
             messages_attach=self.test_messages_attach,
-            expires_time=self.test_expires_time,
+            connection_id=self.test_connection_id,
         )
         transaction_record.state = TransactionRecord.STATE_TRANSACTION_ENDORSED
 
@@ -565,7 +604,7 @@ class TestTransactionManager(AsyncTestCase):
     async def test_transaction_resend(self):
         transaction_record = await self.manager.create_record(
             messages_attach=self.test_messages_attach,
-            expires_time=self.test_expires_time,
+            connection_id=self.test_connection_id,
         )
         transaction_record.state = TransactionRecord.STATE_TRANSACTION_REFUSED
         transaction_record.thread_id = self.test_endorser_transaction_id
@@ -593,14 +632,12 @@ class TestTransactionManager(AsyncTestCase):
     async def test_receive_transaction_resend(self):
         author_transaction_record = await self.manager.create_record(
             messages_attach=self.test_messages_attach,
-            expires_time=self.test_expires_time,
+            connection_id=self.test_connection_id,
         )
         (
             author_transaction_record,
             author_transaction_request,
-        ) = await self.manager.create_request(
-            author_transaction_record, self.test_connection_id
-        )
+        ) = await self.manager.create_request(author_transaction_record)
 
         endorser_transaction_record = await self.manager.receive_request(
             author_transaction_request, self.test_receivers_connection_id
@@ -666,5 +703,5 @@ class TestTransactionManager(AsyncTestCase):
         ) as mock_retrieve:
             mock_retrieve.side_effect = StorageNotFoundError()
 
-            with self.assertRaises(web.HTTPNotFound):
+            with self.assertRaises(TransactionManagerError):
                 await self.manager.set_transaction_their_job(mock_job, mock_receipt)

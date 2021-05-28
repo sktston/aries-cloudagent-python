@@ -171,6 +171,24 @@ class MultitenantManager:
             # MTODO: add ledger config
             profile, _ = await wallet_config(context, provision=provision)
             self._instances[wallet_id] = profile
+        # FIXME: Scale-out support
+        # - wallet_record UPDATE case: OK
+        #   - fetch label, image_url and webhook_urls from db record
+        # - wallet_record DELETE case: Garbage issue
+        #   - deleted profiles remain in self._instances
+        #     (all servers except a server that requested wallet remove API)
+        #     below PR can solve this
+        #     https://github.com/hyperledger/aries-cloudagent-python/pull/928
+        else:
+            profile = self._instances[wallet_id]
+            profile.settings.update(wallet_record.settings)
+
+            extra_settings = {
+                "admin.webhook_urls": self.get_webhook_urls(
+                    self._profile.context, wallet_record
+                ),
+            }
+            profile.settings.update(extra_settings)
 
         return self._instances[wallet_id]
 

@@ -61,3 +61,40 @@ def load_postgres_plugin(storage_config, storage_creds, raise_exc=False):
         LOADED = True
 
         LOGGER.info("Success, loaded postgres wallet storage")
+
+
+def load_mysql_plugin(storage_config, storage_creds, raise_exc=False):
+    """Load mysql dll and configure mysql wallet."""
+    global LOADED, LOGGER
+
+    if not LOADED:
+        LOGGER.info(
+            "Checking input mysql storage_config and storage_creds arguments"
+        )
+        try:
+            json.loads(storage_config)
+            json.loads(storage_creds)
+        except json.decoder.JSONDecodeError:
+            LOGGER.error(
+                "Invalid stringified JSON input, check storage_config and storage_creds"
+            )
+            if raise_exc:
+                raise OSError(
+                    "Invalid stringified JSON input, "
+                    "check storage_config and storage_creds"
+                )
+            else:
+                raise SystemExit(1)
+
+        LOGGER.info("Initializing mysql wallet")
+        stg_lib = cdll.LoadLibrary("libmysqlstorage" + file_ext())
+        result = stg_lib.mysql_storage_init()
+        if result != 0:
+            LOGGER.error("Error unable to load mysql wallet storage: %s", result)
+            if raise_exc:
+                raise OSError(f"Error unable to load mysql wallet storage: {result}")
+            else:
+                raise SystemExit(1)
+        LOADED = True
+
+        LOGGER.info("Success, loaded mysql wallet storage")

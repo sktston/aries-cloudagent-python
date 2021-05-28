@@ -18,6 +18,7 @@ from marshmallow.validate import Regexp
 
 from ...admin.request_context import AdminRequestContext
 from ...indy.issuer import IndyIssuer, IndyIssuerError
+from ...indy.sdk.models.schema import SchemaSchema
 from ...ledger.base import BaseLedger
 from ...ledger.error import LedgerError
 from ...protocols.endorse_transaction.v1_0.manager import TransactionManager
@@ -28,9 +29,15 @@ from ...storage.base import BaseStorage
 from ...storage.error import StorageError
 
 from ..models.openapi import OpenAPISchema
-from ..valid import B58, NATURAL_NUM, INDY_SCHEMA_ID, INDY_VERSION
+from ..valid import B58, INDY_SCHEMA_ID, INDY_VERSION
 
 from .util import SchemaQueryStringSchema, SCHEMA_SENT_RECORD_TYPE, SCHEMA_TAGS
+
+
+from ..valid import UUIDFour
+from ...connections.models.conn_record import ConnRecord
+from ...storage.error import StorageNotFoundError
+from ..models.base import BaseModelError
 
 
 class SchemaSendRequestSchema(OpenAPISchema):
@@ -60,7 +67,10 @@ class SchemaSendResultSchema(OpenAPISchema):
     schema_id = fields.Str(
         description="Schema identifier", required=True, **INDY_SCHEMA_ID
     )
-    schema = fields.Dict(description="Schema result", required=True)
+    schema = fields.Nested(
+        SchemaSchema(),
+        description="Schema definition",
+    )
 
 
 class TxnOrSchemaSendResultSchema(OpenAPISchema):
@@ -76,27 +86,6 @@ class TxnOrSchemaSendResultSchema(OpenAPISchema):
         required=False,
         description="Schema transaction to endorse",
     )
-
-
-class SchemaSchema(OpenAPISchema):
-    """Content for returned schema."""
-
-    ver = fields.Str(description="Node protocol version", **INDY_VERSION)
-    ident = fields.Str(data_key="id", description="Schema identifier", **INDY_SCHEMA_ID)
-    name = fields.Str(
-        description="Schema name",
-        example=INDY_SCHEMA_ID["example"].split(":")[2],
-    )
-    version = fields.Str(description="Schema version", **INDY_VERSION)
-    attr_names = fields.List(
-        fields.Str(
-            description="Attribute name",
-            example="score",
-        ),
-        description="Schema attribute names",
-        data_key="attrNames",
-    )
-    seqNo = fields.Int(description="Schema sequence number", strict=True, **NATURAL_NUM)
 
 
 class SchemaGetResultSchema(OpenAPISchema):
@@ -124,28 +113,27 @@ class SchemaIdMatchInfoSchema(OpenAPISchema):
     )
 
 
-class AutoEndorseOptionSchema(OpenAPISchema):
-    """Class for user to input whether to auto-endorse the transaction or not."""
+class CreateSchemaTxnForEndorserOptionSchema(OpenAPISchema):
+    """Class for user to input whether to create a transaction for endorser or not."""
 
-    auto_endorse = fields.Boolean(
-        description="Auto-endorse Transaction",
+    create_transaction_for_endorser = fields.Boolean(
+        description="Create Transaction For Endorser's signature",
         required=False,
     )
 
 
-class EndorserDIDOptionSchema(OpenAPISchema):
-    """Class for user to input the DID associated with the requested endorser."""
+class SchemaConnIdMatchInfoSchema(OpenAPISchema):
+    """Path parameters and validators for request taking connection id."""
 
-    endorser_did = fields.Str(
-        description="Endorser DID",
-        required=False,
+    conn_id = fields.Str(
+        description="Connection identifier", required=False, example=UUIDFour.EXAMPLE
     )
 
 
 @docs(tags=["schema"], summary="Sends a schema to the ledger")
 @request_schema(SchemaSendRequestSchema())
-@querystring_schema(AutoEndorseOptionSchema())
-@querystring_schema(EndorserDIDOptionSchema())
+@querystring_schema(CreateSchemaTxnForEndorserOptionSchema())
+@querystring_schema(SchemaConnIdMatchInfoSchema())
 @response_schema(TxnOrSchemaSendResultSchema(), 200, description="")
 async def schemas_send_schema(request: web.BaseRequest):
     """
@@ -159,14 +147,44 @@ async def schemas_send_schema(request: web.BaseRequest):
 
     """
     context: AdminRequestContext = request["context"]
-    auto_endorse = json.loads(request.query.get("auto_endorse", "true"))
-    endorser_did = request.query.get("endorser_did", None)
+    create_transaction_for_endorser = json.loads(
+        request.query.get("create_transaction_for_endorser", "false")
+    )
+    write_ledger = not create_transaction_for_endorser
+    endorser_did = None
+    connection_id = request.query.get("conn_id")
 
     body = await request.json()
 
     schema_name = body.get("schema_name")
     schema_version = body.get("schema_version")
     attributes = body.get("attributes")
+
+    if not write_ledger:
+
+        try:
+            async with context.session() as session:
+                connection_record = await ConnRecord.retrieve_by_id(
+                    session, connection_id
+                )
+        except StorageNotFoundError as err:
+            raise web.HTTPNotFound(reason=err.roll_up) from err
+        except BaseModelError as err:
+            raise web.HTTPBadRequest(reason=err.roll_up) from err
+
+        session = await context.session()
+        endorser_info = await connection_record.metadata_get(session, "endorser_info")
+        if not endorser_info:
+            raise web.HTTPForbidden(
+                reason="Endorser Info is not set up in "
+                "connection metadata for this connection record"
+            )
+        if "endorser_did" not in endorser_info.keys():
+            raise web.HTTPForbidden(
+                reason=' "endorser_did" is not set in "endorser_info"'
+                " in connection metadata for this connection record"
+            )
+        endorser_did = endorser_info["endorser_did"]
 
     ledger = context.inject(BaseLedger, required=False)
     if not ledger:
@@ -178,22 +196,22 @@ async def schemas_send_schema(request: web.BaseRequest):
     issuer = context.inject(IndyIssuer)
     async with ledger:
         try:
-            # if not auto_endorse, then the returned "schema_def" is actually
-            # the signed transaction
+            # if create_transaction_for_endorser, then the returned "schema_def"
+            # is actually the signed transaction
             schema_id, schema_def = await shield(
                 ledger.create_and_send_schema(
                     issuer,
                     schema_name,
                     schema_version,
                     attributes,
-                    write_ledger=auto_endorse,
+                    write_ledger=write_ledger,
                     endorser_did=endorser_did,
                 )
             )
         except (IndyIssuerError, LedgerError) as err:
             raise web.HTTPBadRequest(reason=err.roll_up) from err
 
-    if auto_endorse:
+    if not create_transaction_for_endorser:
         return web.json_response(
             {"sent": {"schema_id": schema_id, "schema": schema_def}}
         )
@@ -203,8 +221,7 @@ async def schemas_send_schema(request: web.BaseRequest):
         transaction_mgr = TransactionManager(session)
         try:
             transaction = await transaction_mgr.create_record(
-                messages_attach=schema_def["signed_txn"],
-                expires_time="1597708800",
+                messages_attach=schema_def["signed_txn"], connection_id=connection_id
             )
         except StorageError as err:
             raise web.HTTPBadRequest(reason=err.roll_up) from err

@@ -1,6 +1,4 @@
-from behave import given, when, then
 import json
-from time import sleep
 import time
 
 from bdd_support.agent_backchannel_client import (
@@ -9,8 +7,11 @@ from bdd_support.agent_backchannel_client import (
     agent_container_POST,
     read_schema_data,
     async_sleep,
+    read_json_data,
 )
+from behave import given, when, then
 from runners.agent_container import AgentContainer
+from time import sleep
 
 
 # This step is defined in another feature file
@@ -55,7 +56,7 @@ def step_impl(context, agent_name, connection_job_role):
     print("Updating role for connection:", connection_id, connection_job_role)
     updated_connection = agent_container_POST(
         agent["agent"],
-        "/transactions/" + connection_id + "/set-transaction-jobs",
+        "/transactions/" + connection_id + "/set-endorser-role",
         params={"transaction_my_job": connection_job_role},
     )
 
@@ -64,24 +65,44 @@ def step_impl(context, agent_name, connection_job_role):
     async_sleep(1.0)
 
 
+@when('"{agent_name}" connection sets endorser info')
+def step_impl(context, agent_name):
+    agent = context.active_agents[agent_name]
+
+    # current connection_id for the selected agent
+    connection_id = agent["agent"].agent.connection_id
+    endorser_did = context.public_dids["ENDORSER"]
+
+    updated_connection = agent_container_POST(
+        agent["agent"],
+        "/transactions/" + connection_id + "/set-endorser-info",
+        params={"endorser_did": endorser_did},
+    )
+
+    # assert goodness
+    assert updated_connection["endorser_did"] == endorser_did
+    async_sleep(1.0)
+
+
 @when('"{agent_name}" authors a schema transaction with {schema_name}')
 def step_impl(context, agent_name, schema_name):
     agent = context.active_agents[agent_name]
 
     schema_info = read_schema_data(schema_name)
-    endorser_did = context.public_dids["ENDORSER"]
+    connection_id = agent["agent"].agent.connection_id
+
     created_txn = agent_container_POST(
         agent["agent"],
         "/schemas",
         data=schema_info["schema"],
-        params={"auto_endorse": "false", "endorser_did": endorser_did},
+        params={"conn_id": connection_id, "create_transaction_for_endorser": "true"},
     )
 
     # assert goodness
     assert created_txn["txn"]["state"] == "transaction_created"
     if not "txn_ids" in context:
         context.txn_ids = {}
-    context.txn_ids["AUTHOR"] = created_txn["txn"]["_id"]
+    context.txn_ids["AUTHOR"] = created_txn["txn"]["transaction_id"]
 
 
 @when('"{agent_name}" requests endorsement for the transaction')
@@ -90,12 +111,14 @@ def step_impl(context, agent_name):
 
     async_sleep(1.0)
     txn_id = context.txn_ids["AUTHOR"]
-    connection_id = agent["agent"].agent.connection_id
-    print("Requesting endorsement for connection:", connection_id)
+
+    data = read_json_data("expires_time.json")
+
     requested_txn = agent_container_POST(
         agent["agent"],
         "/transactions/create-request",
-        params={"conn_id": connection_id, "tran_id": txn_id},
+        data=data,
+        params={"tran_id": txn_id},
     )
 
     # assert goodness
@@ -114,7 +137,7 @@ def step_impl(context, agent_name):
         i = i - 1
     requested_txn = txns["results"][0]
     assert requested_txn["state"] == "request_received"
-    txn_id = requested_txn["_id"]
+    txn_id = requested_txn["transaction_id"]
 
     endorsed_txn = agent_container_POST(
         agent["agent"], "/transactions/" + txn_id + "/endorse"
@@ -131,13 +154,13 @@ def step_impl(context, agent_name):
     txns = agent_container_GET(agent["agent"], "/transactions")
     requested_txn = txns["results"][0]
     assert requested_txn["state"] == "transaction_endorsed"
-    txn_id = requested_txn["_id"]
+    txn_id = requested_txn["transaction_id"]
 
     written_txn = agent_container_POST(
         agent["agent"], "/transactions/" + txn_id + "/write"
     )
 
-    assert written_txn["state"] == "transaction_completed"
+    assert written_txn["state"] == "transaction_acked"
 
 
 @then('"{agent_name}" has written the schema {schema_name} to the ledger')

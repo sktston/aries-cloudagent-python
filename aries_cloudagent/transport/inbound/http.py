@@ -1,8 +1,11 @@
 """Http Transport classes and functions."""
 
 import logging
+import os
 
 from aiohttp import web
+
+from elasticapm.contrib.aiohttp import ElasticAPM
 
 from ...messaging.error import MessageParseError
 
@@ -12,6 +15,7 @@ from ..wire_format import DIDCOMM_V0_MIME_TYPE, DIDCOMM_V1_MIME_TYPE
 from .base import BaseInboundTransport, InboundTransportSetupError
 
 LOGGER = logging.getLogger(__name__)
+ELASTIC_APM_ENABLED = os.getenv("ELASTIC_APM_ENABLED")
 
 
 class HttpTransport(BaseInboundTransport):
@@ -51,6 +55,11 @@ class HttpTransport(BaseInboundTransport):
 
         """
         app = await self.make_application()
+
+        # ElasticAPM is enabled only under initial platform
+        if ELASTIC_APM_ENABLED and ELASTIC_APM_ENABLED == "true":
+            apm = ElasticAPM(app)
+            
         runner = web.AppRunner(app)
         await runner.setup()
         self.site = web.TCPSite(runner, host=self.host, port=self.port)

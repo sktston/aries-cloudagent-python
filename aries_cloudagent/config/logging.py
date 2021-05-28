@@ -2,7 +2,7 @@
 
 import logging
 from io import TextIOWrapper
-from logging.config import fileConfig
+from logging.config import fileConfig, dictConfig
 from typing import TextIO
 
 import pkg_resources
@@ -36,6 +36,18 @@ def load_resource(path: str, encoding: str = None) -> TextIO:
         pass
 
 
+class IgnoreFilter(logging.Filter):
+    def __init__(self, param=None):
+        self.param = param
+
+    def filter(self, record):
+        if self.param is None:
+            allow = True
+        else:
+            allow = self.param not in record.msg
+        return allow
+
+
 class LoggingConfigurator:
     """Utility class used to configure logging and print an informative start banner."""
 
@@ -66,6 +78,41 @@ class LoggingConfigurator:
         else:
             logging.basicConfig(level=logging.WARNING)
             logging.root.warning(f"Logging config file not found: {config_path}")
+
+        aiohttp_logging_config = {
+            'version': 1,
+            'disable_existing_loggers': False,
+            'formatters': {
+                'standard': {
+                    'format': '%(asctime)s %(name)s %(levelname)s %(message)s'
+                },
+            },
+            'filters': {
+                'ignore_ready': {
+                    '()': IgnoreFilter,
+                    'param': 'GET /status/ready HTTP',
+                },
+                'ignore_live': {
+                    '()': IgnoreFilter,
+                    'param': 'GET /status/live HTTP',
+                },
+            },
+            'handlers': {
+                'aiohttp_handler': {
+                    'formatter': 'standard',
+                    'class': 'logging.StreamHandler',
+                    'filters': ['ignore_ready', 'ignore_live'],
+                },
+            },
+            'loggers': {
+                'aiohttp': {
+                    'handlers': ['aiohttp_handler'],
+                    'level': 'INFO',
+                    'propagate': False
+                },
+            }
+        }
+        dictConfig(aiohttp_logging_config)
 
         if log_file:
             logging.root.handlers.clear()

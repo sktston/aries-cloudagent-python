@@ -8,9 +8,11 @@ from .....core.in_memory import InMemoryProfile
 from .....ledger.base import BaseLedger
 from .....wallet.base import BaseWallet
 from .....wallet.did_info import DIDInfo
+from .....wallet.did_method import DIDMethod
+from .....wallet.key_type import KeyType
 
-from .. import routes as test_module
 from ..models.transaction_record import TransactionRecord
+from .. import routes as test_module
 
 
 TEST_DID = "LjgpST2rjsoxYegQDRm7EL"
@@ -131,9 +133,13 @@ class TestEndorseTransactionRoutes(AsyncTestCase):
 
     async def test_transaction_create_request(self):
         self.request.query = {
-            "conn_id": "dummy",
             "tran_id": "dummy",
         }
+        self.request.json = async_mock.CoroutineMock(
+            return_value={
+                "expires_time": "2021-03-29T05:22:19Z",
+            }
+        )
         with async_mock.patch.object(
             ConnRecord, "retrieve_by_id", async_mock.CoroutineMock()
         ) as mock_conn_rec_retrieve, async_mock.patch.object(
@@ -174,9 +180,13 @@ class TestEndorseTransactionRoutes(AsyncTestCase):
 
     async def test_transaction_create_request_not_found_x(self):
         self.request.query = {
-            "conn_id": "dummy",
             "tran_id": "dummy",
         }
+        self.request.json = async_mock.CoroutineMock(
+            return_value={
+                "expires_time": "2021-03-29T05:22:19Z",
+            }
+        )
         with async_mock.patch.object(
             ConnRecord, "retrieve_by_id", async_mock.CoroutineMock()
         ) as mock_conn_rec_retrieve:
@@ -187,9 +197,13 @@ class TestEndorseTransactionRoutes(AsyncTestCase):
 
     async def test_transaction_create_request_base_model_x(self):
         self.request.query = {
-            "conn_id": "dummy",
             "tran_id": "dummy",
         }
+        self.request.json = async_mock.CoroutineMock(
+            return_value={
+                "expires_time": "2021-03-29T05:22:19Z",
+            }
+        )
         with async_mock.patch.object(
             ConnRecord, "retrieve_by_id", async_mock.CoroutineMock()
         ) as mock_conn_rec_retrieve, async_mock.patch.object(
@@ -214,9 +228,13 @@ class TestEndorseTransactionRoutes(AsyncTestCase):
 
     async def test_transaction_create_request_no_jobs_x(self):
         self.request.query = {
-            "conn_id": "dummy",
             "tran_id": "dummy",
         }
+        self.request.json = async_mock.CoroutineMock(
+            return_value={
+                "expires_time": "2021-03-29T05:22:19Z",
+            }
+        )
         with async_mock.patch.object(
             ConnRecord, "retrieve_by_id", async_mock.CoroutineMock()
         ) as mock_conn_rec_retrieve, async_mock.patch.object(
@@ -246,9 +264,13 @@ class TestEndorseTransactionRoutes(AsyncTestCase):
 
     async def test_transaction_create_request_no_my_job_x(self):
         self.request.query = {
-            "conn_id": "dummy",
             "tran_id": "dummy",
         }
+        self.request.json = async_mock.CoroutineMock(
+            return_value={
+                "expires_time": "2021-03-29T05:22:19Z",
+            }
+        )
         with async_mock.patch.object(
             ConnRecord, "retrieve_by_id", async_mock.CoroutineMock()
         ) as mock_conn_rec_retrieve, async_mock.patch.object(
@@ -284,9 +306,13 @@ class TestEndorseTransactionRoutes(AsyncTestCase):
 
     async def test_transaction_create_request_no_their_job_x(self):
         self.request.query = {
-            "conn_id": "dummy",
             "tran_id": "dummy",
         }
+        self.request.json = async_mock.CoroutineMock(
+            return_value={
+                "expires_time": "2021-03-29T05:22:19Z",
+            }
+        )
         with async_mock.patch.object(
             ConnRecord, "retrieve_by_id", async_mock.CoroutineMock()
         ) as mock_conn_rec_retrieve, async_mock.patch.object(
@@ -322,9 +348,13 @@ class TestEndorseTransactionRoutes(AsyncTestCase):
 
     async def test_transaction_create_request_my_wrong_job_x(self):
         self.request.query = {
-            "conn_id": "dummy",
             "tran_id": "dummy",
         }
+        self.request.json = async_mock.CoroutineMock(
+            return_value={
+                "expires_time": "2021-03-29T05:22:19Z",
+            }
+        )
         with async_mock.patch.object(
             ConnRecord, "retrieve_by_id", async_mock.CoroutineMock()
         ) as mock_conn_rec_retrieve, async_mock.patch.object(
@@ -349,9 +379,13 @@ class TestEndorseTransactionRoutes(AsyncTestCase):
 
     async def test_transaction_create_request_mgr_create_request_x(self):
         self.request.query = {
-            "conn_id": "dummy",
             "tran_id": "dummy",
         }
+        self.request.json = async_mock.CoroutineMock(
+            return_value={
+                "expires_time": "2021-03-29T05:22:19Z",
+            }
+        )
         with async_mock.patch.object(
             ConnRecord, "retrieve_by_id", async_mock.CoroutineMock()
         ) as mock_conn_rec_retrieve, async_mock.patch.object(
@@ -388,7 +422,13 @@ class TestEndorseTransactionRoutes(AsyncTestCase):
 
         self.session_inject[BaseWallet] = async_mock.MagicMock(
             get_public_did=async_mock.CoroutineMock(
-                return_value=DIDInfo("did", "verkey", {"meta": "data"})
+                return_value=DIDInfo(
+                    "did",
+                    "verkey",
+                    {"meta": "data"},
+                    method=DIDMethod.SOV,
+                    key_type=KeyType.ED25519,
+                )
             )
         )
 
@@ -446,7 +486,13 @@ class TestEndorseTransactionRoutes(AsyncTestCase):
 
         self.session_inject[BaseWallet] = async_mock.MagicMock(
             get_public_did=async_mock.CoroutineMock(
-                return_value=DIDInfo("did", "verkey", {"meta": "data"})
+                return_value=DIDInfo(
+                    "did",
+                    "verkey",
+                    {"meta": "data"},
+                    method=DIDMethod.SOV,
+                    key_type=KeyType.ED25519,
+                )
             )
         )
 
@@ -463,7 +509,13 @@ class TestEndorseTransactionRoutes(AsyncTestCase):
 
         self.session_inject[BaseWallet] = async_mock.MagicMock(
             get_public_did=async_mock.CoroutineMock(
-                return_value=DIDInfo("did", "verkey", {"meta": "data"})
+                return_value=DIDInfo(
+                    "did",
+                    "verkey",
+                    {"meta": "data"},
+                    method=DIDMethod.SOV,
+                    key_type=KeyType.ED25519,
+                )
             )
         )
 
@@ -485,7 +537,13 @@ class TestEndorseTransactionRoutes(AsyncTestCase):
 
         self.session_inject[BaseWallet] = async_mock.MagicMock(
             get_public_did=async_mock.CoroutineMock(
-                return_value=DIDInfo("did", "verkey", {"meta": "data"})
+                return_value=DIDInfo(
+                    "did",
+                    "verkey",
+                    {"meta": "data"},
+                    method=DIDMethod.SOV,
+                    key_type=KeyType.ED25519,
+                )
             )
         )
 
@@ -509,7 +567,13 @@ class TestEndorseTransactionRoutes(AsyncTestCase):
         self.context.injector.clear_binding(BaseLedger)
         self.session_inject[BaseWallet] = async_mock.MagicMock(
             get_public_did=async_mock.CoroutineMock(
-                return_value=DIDInfo("did", "verkey", {"meta": "data"})
+                return_value=DIDInfo(
+                    "did",
+                    "verkey",
+                    {"meta": "data"},
+                    method=DIDMethod.SOV,
+                    key_type=KeyType.ED25519,
+                )
             )
         )
 
@@ -551,7 +615,13 @@ class TestEndorseTransactionRoutes(AsyncTestCase):
 
         self.session_inject[BaseWallet] = async_mock.MagicMock(
             get_public_did=async_mock.CoroutineMock(
-                return_value=DIDInfo("did", "verkey", {"meta": "data"})
+                return_value=DIDInfo(
+                    "did",
+                    "verkey",
+                    {"meta": "data"},
+                    method=DIDMethod.SOV,
+                    key_type=KeyType.ED25519,
+                )
             )
         )
 
@@ -581,7 +651,13 @@ class TestEndorseTransactionRoutes(AsyncTestCase):
 
         self.session_inject[BaseWallet] = async_mock.MagicMock(
             get_public_did=async_mock.CoroutineMock(
-                return_value=DIDInfo("did", "verkey", {"meta": "data"})
+                return_value=DIDInfo(
+                    "did",
+                    "verkey",
+                    {"meta": "data"},
+                    method=DIDMethod.SOV,
+                    key_type=KeyType.ED25519,
+                )
             )
         )
         self.ledger.txn_endorse = async_mock.CoroutineMock(
@@ -626,7 +702,13 @@ class TestEndorseTransactionRoutes(AsyncTestCase):
 
         self.session_inject[BaseWallet] = async_mock.MagicMock(
             get_public_did=async_mock.CoroutineMock(
-                return_value=DIDInfo("did", "verkey", {"meta": "data"})
+                return_value=DIDInfo(
+                    "did",
+                    "verkey",
+                    {"meta": "data"},
+                    method=DIDMethod.SOV,
+                    key_type=KeyType.ED25519,
+                )
             )
         )
 
@@ -665,7 +747,13 @@ class TestEndorseTransactionRoutes(AsyncTestCase):
 
         self.session_inject[BaseWallet] = async_mock.MagicMock(
             get_public_did=async_mock.CoroutineMock(
-                return_value=DIDInfo("did", "verkey", {"meta": "data"})
+                return_value=DIDInfo(
+                    "did",
+                    "verkey",
+                    {"meta": "data"},
+                    method=DIDMethod.SOV,
+                    key_type=KeyType.ED25519,
+                )
             )
         )
 
@@ -724,7 +812,13 @@ class TestEndorseTransactionRoutes(AsyncTestCase):
 
         self.session_inject[BaseWallet] = async_mock.MagicMock(
             get_public_did=async_mock.CoroutineMock(
-                return_value=DIDInfo("did", "verkey", {"meta": "data"})
+                return_value=DIDInfo(
+                    "did",
+                    "verkey",
+                    {"meta": "data"},
+                    method=DIDMethod.SOV,
+                    key_type=KeyType.ED25519,
+                )
             )
         )
 
@@ -741,7 +835,13 @@ class TestEndorseTransactionRoutes(AsyncTestCase):
 
         self.session_inject[BaseWallet] = async_mock.MagicMock(
             get_public_did=async_mock.CoroutineMock(
-                return_value=DIDInfo("did", "verkey", {"meta": "data"})
+                return_value=DIDInfo(
+                    "did",
+                    "verkey",
+                    {"meta": "data"},
+                    method=DIDMethod.SOV,
+                    key_type=KeyType.ED25519,
+                )
             )
         )
 
@@ -763,7 +863,13 @@ class TestEndorseTransactionRoutes(AsyncTestCase):
 
         self.session_inject[BaseWallet] = async_mock.MagicMock(
             get_public_did=async_mock.CoroutineMock(
-                return_value=DIDInfo("did", "verkey", {"meta": "data"})
+                return_value=DIDInfo(
+                    "did",
+                    "verkey",
+                    {"meta": "data"},
+                    method=DIDMethod.SOV,
+                    key_type=KeyType.ED25519,
+                )
             )
         )
 
@@ -787,7 +893,13 @@ class TestEndorseTransactionRoutes(AsyncTestCase):
 
         self.session_inject[BaseWallet] = async_mock.MagicMock(
             get_public_did=async_mock.CoroutineMock(
-                return_value=DIDInfo("did", "verkey", {"meta": "data"})
+                return_value=DIDInfo(
+                    "did",
+                    "verkey",
+                    {"meta": "data"},
+                    method=DIDMethod.SOV,
+                    key_type=KeyType.ED25519,
+                )
             )
         )
 
@@ -817,7 +929,13 @@ class TestEndorseTransactionRoutes(AsyncTestCase):
 
         self.session_inject[BaseWallet] = async_mock.MagicMock(
             get_public_did=async_mock.CoroutineMock(
-                return_value=DIDInfo("did", "verkey", {"meta": "data"})
+                return_value=DIDInfo(
+                    "did",
+                    "verkey",
+                    {"meta": "data"},
+                    method=DIDMethod.SOV,
+                    key_type=KeyType.ED25519,
+                )
             )
         )
 
@@ -1134,7 +1252,7 @@ class TestEndorseTransactionRoutes(AsyncTestCase):
             with self.assertRaises(test_module.web.HTTPBadRequest):
                 await test_module.transaction_resend(self.request)
 
-    async def test_set_transaction_jobs(self):
+    async def test_set_endorser_role(self):
         self.request.match_info = {"conn_id": "dummy"}
 
         with async_mock.patch.object(
@@ -1156,13 +1274,13 @@ class TestEndorseTransactionRoutes(AsyncTestCase):
                     }
                 )
             )
-            await test_module.set_transaction_jobs(self.request)
+            await test_module.set_endorser_role(self.request)
 
         mock_response.assert_called_once_with(
             {"transaction_my_job": test_module.TransactionJob.TRANSACTION_AUTHOR.name}
         )
 
-    async def test_set_transaction_jobs_not_found_x(self):
+    async def test_set_endorser_role_not_found_x(self):
         self.request.match_info = {"conn_id": "dummy"}
 
         with async_mock.patch.object(
@@ -1171,9 +1289,9 @@ class TestEndorseTransactionRoutes(AsyncTestCase):
             mock_conn_rec_retrieve.side_effect = test_module.StorageNotFoundError()
 
             with self.assertRaises(test_module.web.HTTPNotFound):
-                await test_module.set_transaction_jobs(self.request)
+                await test_module.set_endorser_role(self.request)
 
-    async def test_set_transaction_jobs_base_model_x(self):
+    async def test_set_endorser_role_base_model_x(self):
         self.request.match_info = {"conn_id": "dummy"}
 
         with async_mock.patch.object(
@@ -1182,26 +1300,16 @@ class TestEndorseTransactionRoutes(AsyncTestCase):
             mock_conn_rec_retrieve.side_effect = test_module.BaseModelError()
 
             with self.assertRaises(test_module.web.HTTPBadRequest):
-                await test_module.set_transaction_jobs(self.request)
+                await test_module.set_endorser_role(self.request)
 
-    async def test_transaction_write_schema_txn(self):
-        self.request.match_info = {"tran_id": "dummy"}
+    async def test_set_endorser_info(self):
+        self.request.match_info = {"conn_id": "dummy"}
+        self.request.query = {"endorser_did": "did", "endorser_name": "name"}
         with async_mock.patch.object(
             ConnRecord, "retrieve_by_id", async_mock.CoroutineMock()
         ) as mock_conn_rec_retrieve, async_mock.patch.object(
-            TransactionRecord, "retrieve_by_id", async_mock.CoroutineMock()
-        ) as mock_txn_rec_retrieve, async_mock.patch.object(
-            test_module, "TransactionManager", async_mock.MagicMock()
-        ) as mock_txn_mgr, async_mock.patch.object(
             test_module.web, "json_response"
         ) as mock_response:
-            mock_txn_mgr.return_value = async_mock.MagicMock(
-                complete_transaction=async_mock.CoroutineMock(
-                    return_value=async_mock.MagicMock(  # txn record
-                        serialize=async_mock.MagicMock(return_value={"...": "..."})
-                    )
-                )
-            )
             mock_conn_rec_retrieve.return_value = async_mock.MagicMock(
                 metadata_get=async_mock.CoroutineMock(
                     return_value={
@@ -1212,17 +1320,160 @@ class TestEndorseTransactionRoutes(AsyncTestCase):
                             test_module.TransactionJob.TRANSACTION_ENDORSER.name
                         ),
                     }
+                ),
+                metadata_set=async_mock.CoroutineMock(),
+            )
+            await test_module.set_endorser_info(self.request)
+
+            mock_response.assert_called_once_with(
+                {
+                    "transaction_my_job": "TRANSACTION_AUTHOR",
+                    "transaction_their_job": "TRANSACTION_ENDORSER",
+                    "endorser_did": "did",
+                    "endorser_name": "name",
+                }
+            )
+
+    async def test_set_endorser_info_no_prior_value(self):
+        self.request.match_info = {"conn_id": "dummy"}
+        self.request.query = {"endorser_did": "did", "endorser_name": "name"}
+        with async_mock.patch.object(
+            ConnRecord, "retrieve_by_id", async_mock.CoroutineMock()
+        ) as mock_conn_rec_retrieve, async_mock.patch.object(
+            test_module.web, "json_response"
+        ) as mock_response:
+            mock_conn_rec_retrieve.return_value = async_mock.MagicMock(
+                metadata_get=async_mock.CoroutineMock(
+                    side_effect=[
+                        {
+                            "transaction_my_job": (
+                                test_module.TransactionJob.TRANSACTION_AUTHOR.name
+                            ),
+                            "transaction_their_job": (
+                                test_module.TransactionJob.TRANSACTION_ENDORSER.name
+                            ),
+                        },
+                        None,
+                        {
+                            "endorser_did": "did",
+                            "endorser_name": "name",
+                        },
+                    ]
+                ),
+                metadata_set=async_mock.CoroutineMock(),
+            )
+            await test_module.set_endorser_info(self.request)
+
+            mock_response.assert_called_once_with(
+                {
+                    "endorser_did": "did",
+                    "endorser_name": "name",
+                }
+            )
+
+    async def test_set_endorser_info_not_found_x(self):
+        self.request.match_info = {"conn_id": "dummy"}
+        self.request.query = {"endorser_did": "did", "endorser_name": "name"}
+
+        with async_mock.patch.object(
+            ConnRecord, "retrieve_by_id", async_mock.CoroutineMock()
+        ) as mock_conn_rec_retrieve:
+            mock_conn_rec_retrieve.side_effect = test_module.StorageNotFoundError()
+
+            with self.assertRaises(test_module.web.HTTPNotFound):
+                await test_module.set_endorser_info(self.request)
+
+    async def test_set_endorser_info_base_model_x(self):
+        self.request.match_info = {"conn_id": "dummy"}
+        self.request.query = {"endorser_did": "did", "endorser_name": "name"}
+
+        with async_mock.patch.object(
+            ConnRecord, "retrieve_by_id", async_mock.CoroutineMock()
+        ) as mock_conn_rec_retrieve:
+            mock_conn_rec_retrieve.side_effect = test_module.BaseModelError()
+
+            with self.assertRaises(test_module.web.HTTPBadRequest):
+                await test_module.set_endorser_info(self.request)
+
+    async def test_set_endorser_info_no_transaction_jobs_x(self):
+        self.request.match_info = {"conn_id": "dummy"}
+        self.request.query = {"endorser_did": "did", "endorser_name": "name"}
+
+        with async_mock.patch.object(
+            ConnRecord, "retrieve_by_id", async_mock.CoroutineMock()
+        ) as mock_conn_rec_retrieve:
+            mock_conn_rec_retrieve.return_value = async_mock.MagicMock(
+                metadata_get=async_mock.CoroutineMock(return_value=None)
+            )
+            with self.assertRaises(test_module.web.HTTPForbidden):
+                await test_module.set_endorser_info(self.request)
+
+    async def test_set_endorser_info_no_transaction_my_job_x(self):
+        self.request.match_info = {"conn_id": "dummy"}
+        self.request.query = {"endorser_did": "did", "endorser_name": "name"}
+
+        with async_mock.patch.object(
+            ConnRecord, "retrieve_by_id", async_mock.CoroutineMock()
+        ) as mock_conn_rec_retrieve:
+            mock_conn_rec_retrieve.return_value = async_mock.MagicMock(
+                metadata_get=async_mock.CoroutineMock(
+                    return_value={
+                        "transaction_their_job": (
+                            test_module.TransactionJob.TRANSACTION_ENDORSER.name
+                        ),
+                    }
                 )
             )
+            with self.assertRaises(test_module.web.HTTPForbidden):
+                await test_module.set_endorser_info(self.request)
+
+    async def test_set_endorser_info_my_wrong_job_x(self):
+        self.request.match_info = {"conn_id": "dummy"}
+        self.request.query = {"endorser_did": "did", "endorser_name": "name"}
+        with async_mock.patch.object(
+            ConnRecord, "retrieve_by_id", async_mock.CoroutineMock()
+        ) as mock_conn_rec_retrieve:
+            mock_conn_rec_retrieve.return_value = async_mock.MagicMock(
+                metadata_get=async_mock.CoroutineMock(
+                    return_value={
+                        "transaction_their_job": (
+                            test_module.TransactionJob.TRANSACTION_ENDORSER.name
+                        ),
+                        "transaction_my_job": "a suffusion of yellow",
+                    }
+                )
+            )
+
+            with self.assertRaises(test_module.web.HTTPForbidden):
+                await test_module.set_endorser_info(self.request)
+
+    async def test_transaction_write_schema_txn(self):
+        self.request.match_info = {"tran_id": "dummy"}
+        with async_mock.patch.object(
+            TransactionRecord, "retrieve_by_id", async_mock.CoroutineMock()
+        ) as mock_txn_rec_retrieve, async_mock.patch.object(
+            test_module, "TransactionManager", async_mock.MagicMock()
+        ) as mock_txn_mgr, async_mock.patch.object(
+            test_module.web, "json_response"
+        ) as mock_response:
+
+            mock_txn_mgr.return_value.complete_transaction = async_mock.CoroutineMock()
+
+            mock_txn_mgr.return_value.complete_transaction.return_value = (
+                async_mock.CoroutineMock(
+                    serialize=async_mock.MagicMock(return_value={"...": "..."})
+                ),
+                async_mock.CoroutineMock(),
+            )
+
             mock_txn_rec_retrieve.return_value = async_mock.MagicMock(
-                serialize=async_mock.MagicMock(return_value={"...": "..."}),
+                serialize=async_mock.MagicMock(),
                 state=TransactionRecord.STATE_TRANSACTION_ENDORSED,
                 messages_attach=[
                     {"data": {"json": json.dumps({"message": "attached"})}}
                 ],
             )
             await test_module.transaction_write(self.request)
-
             mock_response.assert_called_once_with({"...": "..."})
 
     async def test_transaction_write_not_found_x(self):
@@ -1247,68 +1498,12 @@ class TestEndorseTransactionRoutes(AsyncTestCase):
             with self.assertRaises(test_module.web.HTTPBadRequest):
                 await test_module.transaction_write(self.request)
 
-    async def test_transaction_write_no_jobs_x(self):
-        self.request.match_info = {"tran_id": "dummy"}
-
-        with async_mock.patch.object(
-            ConnRecord, "retrieve_by_id", async_mock.CoroutineMock()
-        ) as mock_conn_rec_retrieve, async_mock.patch.object(
-            TransactionRecord, "retrieve_by_id", async_mock.CoroutineMock()
-        ) as mock_txn_rec_retrieve:
-            mock_conn_rec_retrieve.return_value = async_mock.MagicMock(
-                metadata_get=async_mock.CoroutineMock(return_value=None)
-            )
-            mock_txn_rec_retrieve.return_value = async_mock.MagicMock(
-                serialize=async_mock.MagicMock(return_value={"...": "..."})
-            )
-
-            with self.assertRaises(test_module.web.HTTPForbidden):
-                await test_module.transaction_write(self.request)
-
-    async def test_transaction_write_my_wrong_job_x(self):
-        self.request.match_info = {"tran_id": "dummy"}
-
-        with async_mock.patch.object(
-            ConnRecord, "retrieve_by_id", async_mock.CoroutineMock()
-        ) as mock_conn_rec_retrieve, async_mock.patch.object(
-            TransactionRecord, "retrieve_by_id", async_mock.CoroutineMock()
-        ) as mock_txn_rec_retrieve:
-            mock_conn_rec_retrieve.return_value = async_mock.MagicMock(
-                metadata_get=async_mock.CoroutineMock(
-                    return_value={
-                        "transaction_their_job": (
-                            test_module.TransactionJob.TRANSACTION_ENDORSER.name
-                        ),
-                        "transaction_my_job": "a suffusion of yellow",
-                    }
-                )
-            )
-            mock_txn_rec_retrieve.return_value = async_mock.MagicMock(
-                serialize=async_mock.MagicMock(return_value={"...": "..."})
-            )
-
-            with self.assertRaises(test_module.web.HTTPForbidden):
-                await test_module.transaction_write(self.request)
-
     async def test_transaction_write_wrong_state_x(self):
         self.request.match_info = {"tran_id": "dummy"}
         with async_mock.patch.object(
-            ConnRecord, "retrieve_by_id", async_mock.CoroutineMock()
-        ) as mock_conn_rec_retrieve, async_mock.patch.object(
             TransactionRecord, "retrieve_by_id", async_mock.CoroutineMock()
         ) as mock_txn_rec_retrieve:
-            mock_conn_rec_retrieve.return_value = async_mock.MagicMock(
-                metadata_get=async_mock.CoroutineMock(
-                    return_value={
-                        "transaction_my_job": (
-                            test_module.TransactionJob.TRANSACTION_AUTHOR.name
-                        ),
-                        "transaction_their_job": (
-                            test_module.TransactionJob.TRANSACTION_ENDORSER.name
-                        ),
-                    }
-                )
-            )
+
             mock_txn_rec_retrieve.return_value = async_mock.MagicMock(
                 serialize=async_mock.MagicMock(return_value={"...": "..."}),
                 state=TransactionRecord.STATE_TRANSACTION_CREATED,
@@ -1320,177 +1515,9 @@ class TestEndorseTransactionRoutes(AsyncTestCase):
             with self.assertRaises(test_module.web.HTTPForbidden):
                 await test_module.transaction_write(self.request)
 
-    async def test_transaction_write_no_ledger_x(self):
-        self.request.match_info = {"tran_id": "dummy"}
-        self.context.injector.clear_binding(BaseLedger)
-        with async_mock.patch.object(
-            ConnRecord, "retrieve_by_id", async_mock.CoroutineMock()
-        ) as mock_conn_rec_retrieve, async_mock.patch.object(
-            TransactionRecord, "retrieve_by_id", async_mock.CoroutineMock()
-        ) as mock_txn_rec_retrieve:
-            mock_conn_rec_retrieve.return_value = async_mock.MagicMock(
-                metadata_get=async_mock.CoroutineMock(
-                    return_value={
-                        "transaction_my_job": (
-                            test_module.TransactionJob.TRANSACTION_AUTHOR.name
-                        ),
-                        "transaction_their_job": (
-                            test_module.TransactionJob.TRANSACTION_ENDORSER.name
-                        ),
-                    }
-                )
-            )
-            mock_txn_rec_retrieve.return_value = async_mock.MagicMock(
-                serialize=async_mock.MagicMock(return_value={"...": "..."}),
-                state=TransactionRecord.STATE_TRANSACTION_ENDORSED,
-                messages_attach=[
-                    {"data": {"json": json.dumps({"message": "attached"})}}
-                ],
-            )
-
-            with self.assertRaises(test_module.web.HTTPForbidden):
-                await test_module.transaction_write(self.request)
-
-    async def test_transaction_write_ledger_txn_submit_x(self):
-        self.request.match_info = {"tran_id": "dummy"}
-        self.ledger.txn_submit = async_mock.CoroutineMock(
-            side_effect=test_module.LedgerError()
-        )
-        with async_mock.patch.object(
-            ConnRecord, "retrieve_by_id", async_mock.CoroutineMock()
-        ) as mock_conn_rec_retrieve, async_mock.patch.object(
-            TransactionRecord, "retrieve_by_id", async_mock.CoroutineMock()
-        ) as mock_txn_rec_retrieve:
-            mock_conn_rec_retrieve.return_value = async_mock.MagicMock(
-                metadata_get=async_mock.CoroutineMock(
-                    return_value={
-                        "transaction_my_job": (
-                            test_module.TransactionJob.TRANSACTION_AUTHOR.name
-                        ),
-                        "transaction_their_job": (
-                            test_module.TransactionJob.TRANSACTION_ENDORSER.name
-                        ),
-                    }
-                )
-            )
-            mock_txn_rec_retrieve.return_value = async_mock.MagicMock(
-                serialize=async_mock.MagicMock(return_value={"...": "..."}),
-                state=TransactionRecord.STATE_TRANSACTION_ENDORSED,
-                messages_attach=[
-                    {"data": {"json": json.dumps({"message": "attached"})}}
-                ],
-            )
-
-            with self.assertRaises(test_module.web.HTTPBadRequest):
-                await test_module.transaction_write(self.request)
-
-    async def test_transaction_write_cred_def_txn(self):
-        self.request.match_info = {"tran_id": "dummy"}
-        self.ledger.txn_submit = async_mock.CoroutineMock(
-            return_value=json.dumps(
-                {
-                    "result": {
-                        "txn": {
-                            "type": "102",
-                            "metadata": {"from": TEST_DID},
-                            "data": {"ref": 1000},
-                        },
-                        "txnMetadata": {"txnId": SCHEMA_ID},
-                    }
-                }
-            )
-        )
-        with async_mock.patch.object(
-            ConnRecord, "retrieve_by_id", async_mock.CoroutineMock()
-        ) as mock_conn_rec_retrieve, async_mock.patch.object(
-            TransactionRecord, "retrieve_by_id", async_mock.CoroutineMock()
-        ) as mock_txn_rec_retrieve, async_mock.patch.object(
-            test_module, "TransactionManager", async_mock.MagicMock()
-        ) as mock_txn_mgr, async_mock.patch.object(
-            test_module.web, "json_response"
-        ) as mock_response:
-            mock_txn_mgr.return_value = async_mock.MagicMock(
-                complete_transaction=async_mock.CoroutineMock(
-                    return_value=async_mock.MagicMock(  # txn record
-                        serialize=async_mock.MagicMock(return_value={"...": "..."})
-                    )
-                )
-            )
-            mock_conn_rec_retrieve.return_value = async_mock.MagicMock(
-                metadata_get=async_mock.CoroutineMock(
-                    return_value={
-                        "transaction_my_job": (
-                            test_module.TransactionJob.TRANSACTION_AUTHOR.name
-                        ),
-                        "transaction_their_job": (
-                            test_module.TransactionJob.TRANSACTION_ENDORSER.name
-                        ),
-                    }
-                )
-            )
-            mock_txn_rec_retrieve.return_value = async_mock.MagicMock(
-                serialize=async_mock.MagicMock(return_value={"...": "..."}),
-                state=TransactionRecord.STATE_TRANSACTION_ENDORSED,
-                messages_attach=[
-                    {"data": {"json": json.dumps({"message": "attached"})}}
-                ],
-            )
-            await test_module.transaction_write(self.request)
-
-            mock_response.assert_called_once_with({"...": "..."})
-
-    async def test_transaction_write_ledger_cred_def_txn_ledger_get_schema_x(self):
-        self.request.match_info = {"tran_id": "dummy"}
-        self.ledger.txn_submit = async_mock.CoroutineMock(
-            return_value=json.dumps(
-                {
-                    "result": {
-                        "txn": {
-                            "type": "102",
-                            "metadata": {"from": TEST_DID},
-                            "data": {"ref": 1000},
-                        },
-                        "txnMetadata": {"txnId": SCHEMA_ID},
-                    }
-                }
-            )
-        )
-        self.ledger.get_schema = async_mock.CoroutineMock(
-            side_effect=test_module.LedgerError()
-        )
-        with async_mock.patch.object(
-            ConnRecord, "retrieve_by_id", async_mock.CoroutineMock()
-        ) as mock_conn_rec_retrieve, async_mock.patch.object(
-            TransactionRecord, "retrieve_by_id", async_mock.CoroutineMock()
-        ) as mock_txn_rec_retrieve:
-            mock_conn_rec_retrieve.return_value = async_mock.MagicMock(
-                metadata_get=async_mock.CoroutineMock(
-                    return_value={
-                        "transaction_my_job": (
-                            test_module.TransactionJob.TRANSACTION_AUTHOR.name
-                        ),
-                        "transaction_their_job": (
-                            test_module.TransactionJob.TRANSACTION_ENDORSER.name
-                        ),
-                    }
-                )
-            )
-            mock_txn_rec_retrieve.return_value = async_mock.MagicMock(
-                serialize=async_mock.MagicMock(return_value={"...": "..."}),
-                state=TransactionRecord.STATE_TRANSACTION_ENDORSED,
-                messages_attach=[
-                    {"data": {"json": json.dumps({"message": "attached"})}}
-                ],
-            )
-
-            with self.assertRaises(test_module.web.HTTPBadRequest):
-                await test_module.transaction_write(self.request)
-
     async def test_transaction_write_schema_txn_complete_x(self):
         self.request.match_info = {"tran_id": "dummy"}
         with async_mock.patch.object(
-            ConnRecord, "retrieve_by_id", async_mock.CoroutineMock()
-        ) as mock_conn_rec_retrieve, async_mock.patch.object(
             TransactionRecord, "retrieve_by_id", async_mock.CoroutineMock()
         ) as mock_txn_rec_retrieve, async_mock.patch.object(
             test_module, "TransactionManager", async_mock.MagicMock()
@@ -1500,18 +1527,7 @@ class TestEndorseTransactionRoutes(AsyncTestCase):
                     side_effect=test_module.StorageError()
                 )
             )
-            mock_conn_rec_retrieve.return_value = async_mock.MagicMock(
-                metadata_get=async_mock.CoroutineMock(
-                    return_value={
-                        "transaction_my_job": (
-                            test_module.TransactionJob.TRANSACTION_AUTHOR.name
-                        ),
-                        "transaction_their_job": (
-                            test_module.TransactionJob.TRANSACTION_ENDORSER.name
-                        ),
-                    }
-                )
-            )
+
             mock_txn_rec_retrieve.return_value = async_mock.MagicMock(
                 serialize=async_mock.MagicMock(return_value={"...": "..."}),
                 state=TransactionRecord.STATE_TRANSACTION_ENDORSED,

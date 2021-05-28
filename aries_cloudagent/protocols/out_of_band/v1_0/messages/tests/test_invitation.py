@@ -1,17 +1,16 @@
 import pytest
 
-from unittest import mock, TestCase
-
-from asynctest import TestCase as AsyncTestCase
+from unittest import TestCase
 
 from ......messaging.models.base import BaseModelError
-from ......wallet.util import naked_to_did_key
+from ......did.did_key import DIDKey
+from ......wallet.key_type import KeyType
 
 from .....connections.v1_0.message_types import ARIES_PROTOCOL as CONN_PROTO
 from .....didcomm_prefix import DIDCommPrefix
 from .....didexchange.v1_0.message_types import ARIES_PROTOCOL as DIDX_PROTO
 
-from ...message_types import INVITATION, PROTOCOL_PACKAGE
+from ...message_types import INVITATION
 
 from .. import invitation as test_module
 from ..invitation import HSProto, InvitationMessage, InvitationMessageSchema
@@ -51,8 +50,7 @@ class TestInvitationMessage(TestCase):
             handshake_protocols=[DIDCommPrefix.qualify_current(DIDX_PROTO)],
             services=[TEST_DID],
         )
-        assert invi.service_dids == [TEST_DID]
-        assert not invi.service_blocks
+        assert invi.services == [TEST_DID]
         assert invi._type == DIDCommPrefix.qualify_current(INVITATION)
 
         service = Service(_id="#inline", _type=DID_COMM, did=TEST_DID)
@@ -62,7 +60,7 @@ class TestInvitationMessage(TestCase):
             handshake_protocols=[DIDCommPrefix.qualify_current(DIDX_PROTO)],
             services=[service],
         )
-        assert invi_msg.service_blocks == [service]
+        assert invi_msg.services == [service]
         assert invi_msg._type == DIDCommPrefix.qualify_current(INVITATION)
 
     def test_wrap_serde(self):
@@ -82,30 +80,28 @@ class TestInvitationMessage(TestCase):
         service = Service(
             _id="#inline",
             _type=DID_COMM,
-            recipient_keys=[naked_to_did_key(TEST_VERKEY)],
+            recipient_keys=[
+                DIDKey.from_public_key_b58(TEST_VERKEY, KeyType.ED25519).did
+            ],
             service_endpoint="http://1.2.3.4:8080/service",
         )
-        data_deser = invi_schema.pre_load(
-            {
-                "label": "label",
-                "requests~attach": [deco.serialize()],
-                "services": [{"a": service.serialize()}],
-            }
-        )
-        assert "services" not in data_deser
+        data_deser = {
+            "label": "label",
+            "requests~attach": [deco.serialize()],
+            "services": [{"a": service.serialize()}],
+        }
+        assert "services" in data_deser
 
         data_ser = invi_schema.post_dump(data_deser)
         assert "services" in data_ser
 
         service = Service(_id="#inline", _type=DID_COMM, did=TEST_DID)
-        data_deser = invi_schema.pre_load(
-            {
-                "label": "label",
-                "requests~attach": [deco.serialize()],
-                "services": [TEST_DID],
-            }
-        )
-        assert "services" not in data_deser
+        data_deser = {
+            "label": "label",
+            "requests~attach": [deco.serialize()],
+            "services": [TEST_DID],
+        }
+        assert "services" in data_deser
 
         data_ser = invi_schema.post_dump(data_deser)
         assert "services" in data_ser
@@ -114,7 +110,9 @@ class TestInvitationMessage(TestCase):
         service = Service(
             _id="#inline",
             _type=DID_COMM,
-            recipient_keys=[naked_to_did_key(TEST_VERKEY)],
+            recipient_keys=[
+                DIDKey.from_public_key_b58(TEST_VERKEY, KeyType.ED25519).did
+            ],
             service_endpoint="http://1.2.3.4:8080/service",
         )
         invi_msg = InvitationMessage(
@@ -133,3 +131,16 @@ class TestInvitationMessage(TestCase):
     def test_from_no_url(self):
         url = "http://aries.ca/no_ci"
         assert InvitationMessage.from_url(url) is None
+
+    def test_invalid_invi_wrong_type_services(self):
+        msg = {"aries": "message"}
+        deco = InvitationMessage.wrap_message(msg)
+        obj_x = {
+            "label": "label",
+            "requests~attach": [deco.serialize()],
+            "services": [123],
+        }
+
+        invi_schema = InvitationMessageSchema()
+        with pytest.raises(test_module.ValidationError):
+            invi_schema.validate_fields(obj_x)
