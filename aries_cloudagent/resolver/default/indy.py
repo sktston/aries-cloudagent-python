@@ -41,7 +41,7 @@ class IndyDIDResolver(BaseDIDResolver):
 
         DEPRECATED: Use supported_did_regex instead.
         """
-        return ["ssw"]
+        return ["sov"]
 
     @property
     def supported_did_regex(self) -> Pattern:

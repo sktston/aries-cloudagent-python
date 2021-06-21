@@ -17,8 +17,6 @@ from ..revocation.models.revocation_registry import RevocationRegistry
 from ..wallet.did_posture import DIDPosture as DIDPostureEnum
 
 B58 = alphabet if isinstance(alphabet, str) else alphabet.decode("ascii")
-CUSTOM_DID_METHOD = "ssw"
-DID_PREFIX = f"did:{CUSTOM_DID_METHOD}"
 
 
 class StrOrDictField(Field):
@@ -194,8 +192,8 @@ class IndyRevRegSize(Range):
 class JWSHeaderKid(Regexp):
     """Validate value against JWS header kid."""
 
-    EXAMPLE = f"{DID_PREFIX}:LjgpST2rjsoxYegQDRm7EL#keys-4"
-    PATTERN = rf"^did:(?:key:z[{B58}]+|{CUSTOM_DID_METHOD}:[{B58}]{{21,22}}(;.*)?(\?.*)?#.+)$"
+    EXAMPLE = "did:sov:LjgpST2rjsoxYegQDRm7EL#keys-4"
+    PATTERN = rf"^did:(?:key:z[{B58}]+|sov:[{B58}]{{21,22}}(;.*)?(\?.*)?#.+)$"
 
     def __init__(self):
         """Initializer."""
@@ -271,14 +269,14 @@ class IndyDID(Regexp):
     """Validate value against indy DID."""
 
     EXAMPLE = "WgWxqztrNooG92RXvxSTWv"
-    PATTERN = re.compile(rf"^({DID_PREFIX}:)?[{B58}]{{21,22}}$")
+    PATTERN = re.compile(rf"^(did:sov:)?[{B58}]{{21,22}}$")
 
     def __init__(self):
         """Initializer."""
 
         super().__init__(
             IndyDID.PATTERN,
-            error="Value {input} is not an ssw decentralized identifier (DID)",
+            error="Value {input} is not an indy decentralized identifier (DID)",
         )
 
 
@@ -327,7 +325,7 @@ class IndyCredDefId(Regexp):
         rf"^([{B58}]{{21,22}})"  # issuer DID
         f":3"  # cred def id marker
         f":CL"  # sig alg
-        rf":(([0-9]*)|([{B58}]{{21,22}}:2:.+:[0-9.]+))"  # schema txn / id
+        rf":(([1-9][0-9]*)|([{B58}]{{21,22}}:2:.+:[0-9.]+))"  # schema txn / id
         f":(.+)?$"  # tag
     )
 

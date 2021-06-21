@@ -21,8 +21,6 @@ limitations under the License.
 from base58 import b58decode
 from urllib.parse import urlparse
 
-from aries_cloudagent.messaging.valid import DID_PREFIX
-
 
 def resource(ref: str, delimiter: str = None) -> str:
     """
@@ -42,7 +40,7 @@ def resource(ref: str, delimiter: str = None) -> str:
 
 def canon_did(uri: str) -> str:
     """
-    Convert a URI into a DID if need be, left-stripping 'did:ssw:' if present.
+    Convert a URI into a DID if need be, left-stripping 'did:sov:' if present.
 
     Args:
         uri: input URI or DID
@@ -55,7 +53,7 @@ def canon_did(uri: str) -> str:
     if ok_did(uri):
         return uri
 
-    if uri.startswith(f"{DID_PREFIX}:"):
+    if uri.startswith("did:sov:"):
         rv = uri[8:]
         if ok_did(rv):
             return rv
@@ -80,14 +78,14 @@ def canon_ref(did: str, ref: str, delimiter: str = None):
         raise ValueError("Bad DID {} cannot act as DID document identifier".format(did))
 
     if ok_did(ref):  # e.g., LjgpST2rjsoxYegQDRm7EL
-        return "{}:{}".format(DID_PREFIX, did)
+        return "did:sov:{}".format(did)
 
     if ok_did(resource(ref, delimiter)):  # e.g., LjgpST2rjsoxYegQDRm7EL#keys-1
-        return "{}:{}".format(DID_PREFIX, ref)
+        return "did:sov:{}".format(ref)
 
     if ref.startswith(
-        f"{DID_PREFIX}:"
-    ):  # e.g., did:ssw:LjgpST2rjsoxYegQDRm7EL, did:ssw:LjgpST2rjsoxYegQDRm7EL#3
+        "did:sov:"
+    ):  # e.g., did:sov:LjgpST2rjsoxYegQDRm7EL, did:sov:LjgpST2rjsoxYegQDRm7EL#3
         rv = ref[8:]
         if ok_did(resource(rv, delimiter)):
             return ref
@@ -96,7 +94,7 @@ def canon_ref(did: str, ref: str, delimiter: str = None):
     if urlparse(ref).scheme:  # e.g., https://example.com/messages/8377464
         return ref
 
-    return "{}:{}{}{}".format(DID_PREFIX, did, delimiter if delimiter else "#", ref)  # e.g., 3
+    return "did:sov:{}{}{}".format(did, delimiter if delimiter else "#", ref)  # e.g., 3
 
 
 def ok_did(token: str) -> bool:
