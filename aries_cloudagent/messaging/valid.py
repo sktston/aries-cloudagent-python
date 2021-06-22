@@ -325,7 +325,7 @@ class IndyCredDefId(Regexp):
         rf"^([{B58}]{{21,22}})"  # issuer DID
         f":3"  # cred def id marker
         f":CL"  # sig alg
-        rf":(([1-9][0-9]*)|([{B58}]{{21,22}}:2:.+:[0-9.]+))"  # schema txn / id
+        rf":(([0-9]*)|([{B58}]{{21,22}}:2:.+:[0-9.]+))"  # schema txn / id (allow 0)
         f":(.+)?$"  # tag
     )
 
