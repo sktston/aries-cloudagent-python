@@ -192,8 +192,8 @@ class IndyRevRegSize(Range):
 class JWSHeaderKid(Regexp):
     """Validate value against JWS header kid."""
 
-    EXAMPLE = "did:sov:LjgpST2rjsoxYegQDRm7EL#keys-4"
-    PATTERN = rf"^did:(?:key:z[{B58}]+|sov:[{B58}]{{21,22}}(;.*)?(\?.*)?#.+)$"
+    EXAMPLE = "did:ssw:LjgpST2rjsoxYegQDRm7EL#keys-4"
+    PATTERN = rf"^did:(?:key:z[{B58}]+|ssw:[{B58}]{{21,22}}(;.*)?(\?.*)?#.+)$"
 
     def __init__(self):
         """Initializer."""
@@ -269,14 +269,14 @@ class IndyDID(Regexp):
     """Validate value against indy DID."""
 
     EXAMPLE = "WgWxqztrNooG92RXvxSTWv"
-    PATTERN = re.compile(rf"^(did:sov:)?[{B58}]{{21,22}}$")
+    PATTERN = re.compile(rf"^(did:ssw:)?[{B58}]{{21,22}}$")
 
     def __init__(self):
         """Initializer."""
 
         super().__init__(
             IndyDID.PATTERN,
-            error="Value {input} is not an indy decentralized identifier (DID)",
+            error="Value {input} is not an ssw decentralized identifier (DID)",
         )
 
 

@@ -227,7 +227,7 @@ class LDProofCredFormatHandler(V20CredFormatHandler):
     async def _did_info_for_did(self, did: str) -> DIDInfo:
         """Get the did info for specified did.
 
-        If the did starts with did:sov it will remove the prefix for
+        If the did starts with did:ssw it will remove the prefix for
         backwards compatibility with not fully qualified did.
 
         Args:
@@ -243,9 +243,9 @@ class LDProofCredFormatHandler(V20CredFormatHandler):
         async with self.profile.session() as session:
             wallet = session.inject(BaseWallet)
 
-            # If the did starts with did:sov we need to query without
-            if did.startswith("did:sov:"):
-                return await wallet.get_local_did(did.replace("did:sov:", ""))
+            # If the did starts with did:ssw we need to query without
+            if did.startswith("did:ssw:"):
+                return await wallet.get_local_did(did.replace("did:ssw:", ""))
 
             # All other methods we can just query
             return await wallet.get_local_did(did)
@@ -307,7 +307,7 @@ class LDProofCredFormatHandler(V20CredFormatHandler):
 
         if did.startswith("did:key:"):
             return DIDKey.from_did(did).key_id
-        elif did.startswith("did:sov:"):
+        elif did.startswith("did:ssw:"):
             # key-1 is what the resolver uses for key id
             return did + "#key-1"
         else:

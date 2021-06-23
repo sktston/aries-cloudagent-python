@@ -67,7 +67,7 @@ class TransactionRequestSchema(AgentMessageSchema):
     signature_request = fields.Dict(
         required=False,
         example={
-            "context": "did:sov",
+            "context": "did:ssw",
             "method": "add-signature",
             "signature_type": "<requested signature type>",
             "signer_goal_code": "transaction.endorse",

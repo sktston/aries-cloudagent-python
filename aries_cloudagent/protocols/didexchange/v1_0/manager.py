@@ -271,7 +271,7 @@ class DIDXManager(BaseConnectionManager):
                 filter(None, [base_mediation_record, mediation_record])
             ),
         )
-        pthid = conn_rec.invitation_msg_id or f"did:sov:{conn_rec.their_public_did}"
+        pthid = conn_rec.invitation_msg_id or f"did:ssw:{conn_rec.their_public_did}"
         attach = AttachDecorator.data_base64(did_doc.serialize())
         await attach.data.sign(my_info.verkey, wallet)
         if not my_label:

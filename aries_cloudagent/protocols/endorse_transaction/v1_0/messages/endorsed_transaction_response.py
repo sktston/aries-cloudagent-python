@@ -77,7 +77,7 @@ class EndorsedTransactionResponseSchema(AgentMessageSchema):
         required=False,
         example={
             "message_id": "143c458d-1b1c-40c7-ab85-4d16808ddf0a",
-            "context": "did:sov",
+            "context": "did:ssw",
             "method": "add-signature",
             "signer_goal_code": "transaction.endorse",
             "signature_type": "<requested signature type>",

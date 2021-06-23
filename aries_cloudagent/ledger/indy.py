@@ -1004,7 +1004,7 @@ class IndySdkLedger(BaseLedger):
         if nym:
             # remove any existing prefix
             nym = self.did_to_nym(nym)
-            return f"did:sov:{nym}"
+            return f"did:ssw:{nym}"
 
     async def rotate_public_did_keypair(self, next_seed: str = None) -> None:
         """

@@ -222,8 +222,8 @@ class BaseConnectionManager:
         """
         if not did.startswith("did:"):
             # DID is bare indy "nym"
-            # prefix with did:sov: for backwards compatibility
-            did = f"did:sov:{did}"
+            # prefix with did:ssw: for backwards compatibility
+            did = f"did:ssw:{did}"
 
         resolver = self._session.inject(DIDResolver)
         try:

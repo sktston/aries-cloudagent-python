@@ -91,7 +91,7 @@ class ConnectionManager(BaseConnectionManager):
             {
                 "@type": "https://didcomm.org/connections/1.0/invitation",
                 "label": "Alice",
-                "did": "did:sov:QmWbsNYhMrjHiqZDTUTEJs"
+                "did": "did:ssw:QmWbsNYhMrjHiqZDTUTEJs"
             }
 
         Or, in the case of a peer DID:
@@ -159,7 +159,7 @@ class ConnectionManager(BaseConnectionManager):
 
             # FIXME - allow ledger instance to format public DID with prefix?
             invitation = ConnectionInvitation(
-                label=my_label, did=f"did:sov:{public_did.did}", image_url=image_url
+                label=my_label, did=f"did:ssw:{public_did.did}", image_url=image_url
             )
 
             # Add mapping for multitenant relaying.

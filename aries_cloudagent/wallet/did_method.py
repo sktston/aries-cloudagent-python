@@ -20,7 +20,7 @@ class DIDMethod(Enum):
     """DID Method class specifying DID methods with supported key types."""
 
     SOV = DIDMethodSpec(
-        method_name="sov", supported_key_types=[KeyType.ED25519], supports_rotation=True
+        method_name="ssw", supported_key_types=[KeyType.ED25519], supports_rotation=True
     )
     KEY = DIDMethodSpec(
         method_name="key",

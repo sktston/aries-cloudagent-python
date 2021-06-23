@@ -24,7 +24,7 @@ class QueryResultSchema(OpenAPISchema):
 class QueryFeaturesQueryStringSchema(OpenAPISchema):
     """Query string parameters for feature query."""
 
-    query = fields.Str(description="Query", required=False, example="did:sov:*")
+    query = fields.Str(description="Query", required=False, example="did:ssw:*")
 
 
 @docs(

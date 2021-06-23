@@ -235,7 +235,7 @@ class InvitationMessageSchema(AgentMessageSchema):
                 "serviceEndpoint": "http://192.168.56.101:8020",
                 "type": "string",
             },
-            "did:sov:WgWxqztrNooG92RXvxSTWv",
+            "did:ssw:WgWxqztrNooG92RXvxSTWv",
         ],
     )
 

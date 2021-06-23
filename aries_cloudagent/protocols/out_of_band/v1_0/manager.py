@@ -215,7 +215,7 @@ class OutOfBandManager(BaseConnectionManager):
                 label=my_label or self._session.settings.get("default_label"),
                 handshake_protocols=handshake_protocols,
                 requests_attach=message_attachments,
-                services=[f"did:sov:{public_did.did}"],
+                services=[f"did:ssw:{public_did.did}"],
             )
             keylist_updates = await mediation_mgr.add_key(
                 public_did.verkey, keylist_updates
