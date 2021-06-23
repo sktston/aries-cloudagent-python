@@ -20,7 +20,6 @@ from ..indy.issuer import DEFAULT_CRED_DEF_TAG, IndyIssuer, IndyIssuerError
 from ..indy.sdk.error import IndyErrorHandler
 from ..messaging.credential_definitions.util import CRED_DEF_SENT_RECORD_TYPE
 from ..messaging.schemas.util import SCHEMA_SENT_RECORD_TYPE
-from ..messaging.valid import DID_PREFIX
 from ..storage.base import StorageRecord
 from ..storage.indy import IndySdkStorage
 from ..utils import sentinel
@@ -1005,7 +1004,7 @@ class IndySdkLedger(BaseLedger):
         if nym:
             # remove any existing prefix
             nym = self.did_to_nym(nym)
-            return f"{DID_PREFIX}:{nym}"
+            return f"did:ssw:{nym}"
 
     async def rotate_public_did_keypair(self, next_seed: str = None) -> None:
         """

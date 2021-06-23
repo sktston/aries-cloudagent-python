@@ -17,7 +17,6 @@ from pydid.verification_method import Ed25519VerificationKey2018
 
 from ..core.error import BaseError
 from ..core.profile import ProfileSession
-from ..messaging.valid import DID_PREFIX
 from ..did.did_key import DIDKey
 from ..protocols.connections.v1_0.messages.connection_invitation import (
     ConnectionInvitation,
@@ -224,7 +223,7 @@ class BaseConnectionManager:
         if not did.startswith("did:"):
             # DID is bare indy "nym"
             # prefix with did:ssw: for backwards compatibility
-            did = f"{DID_PREFIX}:{did}"
+            did = f"did:ssw:{did}"
 
         resolver = self._session.inject(DIDResolver)
         try:

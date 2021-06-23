@@ -31,7 +31,7 @@ class TransactionRecord(BaseExchangeRecord):
 
     SIGNATURE_TYPE = "<requested signature type>"
 
-    SIGNATURE_CONTEXT = "did:sov"
+    SIGNATURE_CONTEXT = "did:ssw"
 
     ADD_SIGNATURE = "add-signature"
 
