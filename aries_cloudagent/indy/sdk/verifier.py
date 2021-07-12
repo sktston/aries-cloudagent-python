@@ -3,15 +3,10 @@
 import json
 import logging
 
-from time import time
-from typing import Mapping
-
 import indy.anoncreds
 from indy.error import IndyError
 
-from ...indy.models.xform import indy_proof_req2non_revoc_intervals
 from ...ledger.indy import IndySdkLedger
-from ...messaging.util import canon, encode
 
 from ..verifier import IndyVerifier
 
@@ -31,6 +26,7 @@ class IndySdkVerifier(IndyVerifier):
         """
         self.ledger = ledger
 
+<<<<<<< HEAD
     def non_revoc_intervals(self, pres_req: dict, pres: dict):
         """
         Remove superfluous non-revocation intervals in presentation request.
@@ -294,6 +290,8 @@ class IndySdkVerifier(IndyVerifier):
                     f"{non_revoc_intervals[uuid]}"
                 )
 
+=======
+>>>>>>> main
     async def verify_presentation(
         self,
         pres_req,
@@ -317,7 +315,7 @@ class IndySdkVerifier(IndyVerifier):
 
         try:
             self.non_revoc_intervals(pres_req, pres)
-            await self.check_timestamps(pres_req, pres, rev_reg_defs)
+            await self.check_timestamps(self.ledger, pres_req, pres, rev_reg_defs)
             await self.pre_verify(pres_req, pres)
         except ValueError as err:
             LOGGER.error(
