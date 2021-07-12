@@ -12,12 +12,15 @@ from ....connections.models.connection_target import ConnectionTarget
 from ....connections.util import mediation_record_if_id
 from ....core.error import BaseError
 from ....core.profile import ProfileSession
+from ....ledger.base import BaseLedger
+from ....ledger.error import LedgerTransactionError, BadLedgerRequestError, LedgerError
 from ....messaging.responder import BaseResponder
 from ....storage.error import StorageError, StorageNotFoundError
 from ....transport.inbound.receipt import MessageReceipt
 from ....wallet.base import BaseWallet
 from ....wallet.did_info import DIDInfo
 from ....wallet.crypto import create_keypair, seed_to_did
+from ....wallet.did_posture import DIDPosture
 from ....wallet.key_type import KeyType
 from ....wallet.did_method import DIDMethod
 from ....wallet.error import WalletNotFoundError
@@ -147,6 +150,26 @@ class ConnectionManager(BaseConnectionManager):
                 raise ConnectionManagerError(
                     "Cannot create public invitation with no public DID"
                 )
+
+            # FIXME: Add posted metadata for issuers that not called register_nym
+            # this routine needs run just once.
+            # therefore, it will be removed later
+            if not public_did.metadata.get("posted"):
+                ledger = self._session.inject(BaseLedger, required=False)
+                if not ledger:
+                    raise ConnectionManagerError(
+                        "Cannot create public invitation with not posted public DID"
+                    )
+                async with ledger:
+                    try:
+                        await ledger.get_nym_role(public_did.did)
+                    except (LedgerTransactionError, BadLedgerRequestError, LedgerError):
+                        raise ConnectionManagerError(
+                            "Cannot create public invitation with not posted public DID"
+                        )
+                did_metadata = {**public_did.metadata, **DIDPosture.POSTED.metadata}
+                await wallet.replace_local_did_metadata(public_did.did, did_metadata)
+            # until here
 
             if multi_use:
                 raise ConnectionManagerError(
