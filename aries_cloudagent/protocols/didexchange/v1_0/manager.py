@@ -285,9 +285,6 @@ class DIDXManager(BaseConnectionManager):
                 filter(None, [base_mediation_record, mediation_record])
             ),
         )
-<<<<<<< HEAD
-        pthid = conn_rec.invitation_msg_id or f"did:ssw:{conn_rec.their_public_did}"
-=======
         if (
             conn_rec.their_public_did is not None
             and conn_rec.their_public_did.startswith("did:")
@@ -296,7 +293,6 @@ class DIDXManager(BaseConnectionManager):
         else:
             qualified_did = f"did:sov:{conn_rec.their_public_did}"
         pthid = conn_rec.invitation_msg_id or qualified_did
->>>>>>> main
         attach = AttachDecorator.data_base64(did_doc.serialize())
         await attach.data.sign(my_info.verkey, wallet)
         if not my_label:

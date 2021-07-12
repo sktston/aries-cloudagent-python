@@ -130,28 +130,9 @@ class BaseWallet(ABC):
             The created `DIDInfo`
 
         """
-<<<<<<< HEAD
-        if method != DIDMethod.SOV:
-            raise WalletError("Creating public did is only allowed for did:ssw dids")
-
-        # validate key_type
-        if not method.supports_key_type(key_type):
-            raise WalletError(
-                f"Invalid key type {key_type.key_type} for method {method.method_name}"
-            )
-
-        metadata = DIDPosture.PUBLIC.metadata
-        dids = await self.get_local_dids()
-        for info in dids:
-            info_meta = info.metadata
-            info_meta["public"] = False
-            await self.replace_local_did_metadata(info.did, info_meta)
-        return await self.create_local_did(
-=======
         metadata = metadata or {}
         metadata.setdefault("posted", True)
         did_info = await self.create_local_did(
->>>>>>> main
             method=method, key_type=key_type, seed=seed, did=did, metadata=metadata
         )
         return await self.set_public_did(did_info)
@@ -176,32 +157,6 @@ class BaseWallet(ABC):
 
         """
 
-<<<<<<< HEAD
-        did_info = await self.get_local_did(did)
-        if did_info.method != DIDMethod.SOV:
-            raise WalletError("Setting public did is only allowed for did:ssw dids")
-
-        # will raise an exception if not found
-        info = None if did is None else await self.get_local_did(did)
-
-        public = await self.get_public_did()
-        if public and info and public.did == info.did:
-            info = public
-        else:
-            if public:
-                metadata = public.metadata.copy()
-                del metadata["public"]
-                await self.replace_local_did_metadata(public.did, metadata)
-
-            if info:
-                metadata = {**info.metadata, **DIDPosture.PUBLIC.metadata}
-                await self.replace_local_did_metadata(info.did, metadata)
-                info = await self.get_local_did(info.did)
-
-        return info
-
-=======
->>>>>>> main
     @abstractmethod
     async def get_local_dids(self) -> Sequence[DIDInfo]:
         """
@@ -284,11 +239,7 @@ class BaseWallet(ABC):
         did_info = await self.get_local_did(did)
 
         if did_info.method != DIDMethod.SOV:
-<<<<<<< HEAD
-            raise WalletError("Setting did endpoint is only allowed for did:ssw dids")
-=======
-            raise WalletError("Setting DID endpoint is only allowed for did:sov DIDs")
->>>>>>> main
+            raise WalletError("Setting DID endpoint is only allowed for did:ssw DIDs")
         metadata = {**did_info.metadata}
         if not endpoint_type:
             endpoint_type = EndpointType.ENDPOINT
