@@ -152,11 +152,8 @@ INDY_CRED = {
 
 LD_PROOF_VC_DETAIL = {
     "credential": {
-        "@context": [
-            "https://www.w3.org/2018/credentials/v1",
-            "https://www.w3.org/2018/credentials/examples/v1",
-        ],
-        "type": ["VerifiableCredential", "UniversityDegreeCredential"],
+        "@context": ["https://www.w3.org/2018/credentials/v1"],
+        "type": ["VerifiableCredential"],
         "credentialSubject": {"test": "key"},
         "issuanceDate": "2021-04-12",
         "issuer": f"did:sov:{TEST_DID}",
@@ -164,11 +161,8 @@ LD_PROOF_VC_DETAIL = {
     "options": {"proofType": "Ed25519Signature2018"},
 }
 LD_PROOF_VC = {
-    "@context": [
-        "https://www.w3.org/2018/credentials/v1",
-        "https://www.w3.org/2018/credentials/examples/v1",
-    ],
-    "type": ["VerifiableCredential", "UniversityDegreeCredential"],
+    "@context": ["https://www.w3.org/2018/credentials/v1"],
+    "type": ["VerifiableCredential"],
     "credentialSubject": {"test": "key"},
     "issuanceDate": "2021-04-12",
     "issuer": f"did:sov:{TEST_DID}",

@@ -14,7 +14,7 @@ SEED = "00000000000000000000000000000000"
 MESSAGE = b"Hello World"
 
 
-class TestCrypto(TestCase):
+class TestUtil(TestCase):
     def test_validate_seed(self):
         assert test_module.validate_seed(None) is None
 

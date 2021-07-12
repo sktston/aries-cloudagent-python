@@ -5,7 +5,7 @@ from typing import Mapping, Optional, Type, TypeVar
 
 from ..core.error import BaseError
 
-InjectType = TypeVar("InjectType")
+InjectType = TypeVar("Inject")
 
 
 class ConfigError(BaseError):

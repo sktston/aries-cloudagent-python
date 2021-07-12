@@ -56,11 +56,8 @@ TEST_DID_KEY = "did:key:z6Mkgg342Ycpuk263R9d8Aq6MUaxPn1DDeHyGo38EefXmgDL"
 
 LD_PROOF_VC_DETAIL = {
     "credential": {
-        "@context": [
-            "https://www.w3.org/2018/credentials/v1",
-            "https://www.w3.org/2018/credentials/examples/v1",
-        ],
-        "type": ["VerifiableCredential", "UniversityDegreeCredential"],
+        "@context": ["https://www.w3.org/2018/credentials/v1"],
+        "type": ["VerifiableCredential"],
         "credentialSubject": {"test": "key"},
         "issuanceDate": "2021-04-12",
         "issuer": TEST_DID_KEY,
@@ -72,11 +69,8 @@ LD_PROOF_VC_DETAIL = {
 }
 LD_PROOF_VC_DETAIL_BBS = {
     "credential": {
-        "@context": [
-            "https://www.w3.org/2018/credentials/v1",
-            "https://www.w3.org/2018/credentials/examples/v1",
-        ],
-        "type": ["VerifiableCredential", "UniversityDegreeCredential"],
+        "@context": ["https://www.w3.org/2018/credentials/v1"],
+        "type": ["VerifiableCredential"],
         "credentialSubject": {"test": "key"},
         "issuanceDate": "2021-04-12",
         "issuer": TEST_DID_KEY,
@@ -87,11 +81,8 @@ LD_PROOF_VC_DETAIL_BBS = {
     },
 }
 LD_PROOF_VC = {
-    "@context": [
-        "https://www.w3.org/2018/credentials/v1",
-        "https://www.w3.org/2018/credentials/examples/v1",
-    ],
-    "type": ["VerifiableCredential", "UniversityDegreeCredential"],
+    "@context": ["https://www.w3.org/2018/credentials/v1"],
+    "type": ["VerifiableCredential"],
     "credentialSubject": {"test": "key"},
     "issuanceDate": "2021-04-12",
     "issuer": TEST_DID_KEY,
@@ -892,8 +883,7 @@ class TestV20LDProofCredFormatHandler(AsyncTestCase):
                 VCRecord(
                     contexts=LD_PROOF_VC["@context"],
                     expanded_types=[
-                        "https://www.w3.org/2018/credentials#VerifiableCredential",
-                        "https://example.org/examples#UniversityDegreeCredential",
+                        "https://www.w3.org/2018/credentials#VerifiableCredential"
                     ],
                     issuer_id=LD_PROOF_VC["issuer"],
                     subject_ids=[],

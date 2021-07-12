@@ -36,11 +36,8 @@ class TestV20CredRequest(AsyncTestCase):
 
     ld_proof_cred_req = {
         "credential": {
-            "@context": [
-                "https://www.w3.org/2018/credentials/v1",
-                "https://www.w3.org/2018/credentials/examples/v1",
-            ],
-            "type": ["VerifiableCredential", "UniversityDegreeCredential"],
+            "@context": ["https://www.w3.org/2018/credentials/v1"],
+            "type": ["VerifiableCredential"],
             "credentialSubject": {"test": "key"},
             "issuanceDate": "2021-04-12",
             "issuer": "did:sov:something",

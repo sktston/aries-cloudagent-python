@@ -124,7 +124,7 @@ class IndyIssuer(ABC, metaclass=ABCMeta):
         credential_values: dict,
         cred_ex_id: str,
         revoc_reg_id: str = None,
-        tails_file_path: str = None,
+        tails_reader_handle: int = None,
     ) -> Tuple[str, str]:
         """
         Create a credential.
@@ -136,7 +136,7 @@ class IndyIssuer(ABC, metaclass=ABCMeta):
             credential_values: Values to go in credential
             cred_ex_id: credential exchange identifier to use in issuer cred rev rec
             revoc_reg_id: ID of the revocation registry
-            tails_file_path: The location of the tails file
+            tails_reader_handle: Handle for the tails file blob reader
 
         Returns:
             A tuple of created credential and revocation id

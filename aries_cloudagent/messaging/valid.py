@@ -302,22 +302,6 @@ class DIDValidation(Regexp):
         )
 
 
-# temporary support for short Indy DIDs in place of qualified DIDs
-class MaybeIndyDID(Regexp):
-    """Validate value against any valid DID spec or a short Indy DID."""
-
-    EXAMPLE = DIDValidation.EXAMPLE
-    PATTERN = re.compile(IndyDID.PATTERN.pattern + "|" + DIDValidation.PATTERN.pattern)
-
-    def __init__(self):
-        """Initializer."""
-
-        super().__init__(
-            MaybeIndyDID.PATTERN,
-            error="Value {input} is not a valid DID",
-        )
-
-
 class IndyRawPublicKey(Regexp):
     """Validate value against indy (Ed25519VerificationKey2018) raw public key."""
 
@@ -681,11 +665,6 @@ class CredentialType(Validator):
         length = len(value)
         if length < 1 or CredentialType.CREDENTIAL_TYPE not in value:
             raise ValidationError(f"type must include {CredentialType.CREDENTIAL_TYPE}")
-        if length == 1:
-            raise ValidationError(
-                "type must include additional, more narrow,"
-                " types (e.g. UniversityDegreeCredential)"
-            )
 
         return value
 
@@ -772,7 +751,6 @@ JWT = {"validate": JSONWebToken(), "example": JSONWebToken.EXAMPLE}
 DID_KEY = {"validate": DIDKey(), "example": DIDKey.EXAMPLE}
 DID_POSTURE = {"validate": DIDPosture(), "example": DIDPosture.EXAMPLE}
 INDY_DID = {"validate": IndyDID(), "example": IndyDID.EXAMPLE}
-GENERIC_DID = {"validate": MaybeIndyDID(), "example": MaybeIndyDID.EXAMPLE}
 INDY_RAW_PUBLIC_KEY = {
     "validate": IndyRawPublicKey(),
     "example": IndyRawPublicKey.EXAMPLE,

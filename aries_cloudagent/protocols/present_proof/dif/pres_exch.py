@@ -384,7 +384,6 @@ class DIFField(BaseModel):
     def __init__(
         self,
         *,
-        id: str = None,
         paths: Sequence[str] = None,
         purpose: str = None,
         predicate: str = None,
@@ -395,7 +394,6 @@ class DIFField(BaseModel):
         self.purpose = purpose
         self.predicate = predicate
         self._filter = _filter
-        self.id = id
 
 
 class DIFFieldSchema(BaseModelSchema):
@@ -407,7 +405,6 @@ class DIFFieldSchema(BaseModelSchema):
         model_class = DIFField
         unknown = EXCLUDE
 
-    id = fields.Str(description="ID", required=False)
     paths = fields.List(
         fields.Str(description="Path", required=False),
         required=False,
