@@ -396,7 +396,7 @@ class InMemoryWallet(BaseWallet):
             did = info.did
 
         if info.method != DIDMethod.SOV:
-            raise WalletError("Setting public DID is only allowed for did:sov DIDs")
+            raise WalletError("Setting public DID is only allowed for did:ssw DIDs")
 
         public = await self.get_public_did()
         if public and public.did == did:

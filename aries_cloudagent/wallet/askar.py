@@ -402,7 +402,7 @@ class AskarWallet(BaseWallet):
             info = did
 
         if info.method != DIDMethod.SOV:
-            raise WalletError("Setting public DID is only allowed for did:sov DIDs")
+            raise WalletError("Setting public DID is only allowed for did:ssw DIDs")
 
         public = await self.get_public_did()
         if not public or public.did != info.did:
@@ -440,7 +440,7 @@ class AskarWallet(BaseWallet):
         """
         did_info = await self.get_local_did(did)
         if did_info.method != DIDMethod.SOV:
-            raise WalletError("Setting DID endpoint is only allowed for did:sov DIDs")
+            raise WalletError("Setting DID endpoint is only allowed for did:ssw DIDs")
         metadata = {**did_info.metadata}
         if not endpoint_type:
             endpoint_type = EndpointType.ENDPOINT
@@ -481,7 +481,7 @@ class AskarWallet(BaseWallet):
                 f"DID method '{did_method.method_name}' does not support key rotation."
             )
 
-        # create a new key to be rotated to (only did:sov/ED25519 supported for now)
+        # create a new key to be rotated to (only did:ssw/ED25519 supported for now)
         keypair = _create_keypair(KeyType.ED25519, next_seed)
         verkey = bytes_to_b58(keypair.get_public_bytes())
         try:

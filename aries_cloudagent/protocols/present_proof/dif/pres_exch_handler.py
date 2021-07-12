@@ -436,7 +436,7 @@ class DIFPresExchHandler:
             wallet = session.inject(BaseWallet)
             try:
                 for subject_id in subject_ids:
-                    await wallet.get_local_did(subject_id.replace("did:sov:", ""))
+                    await wallet.get_local_did(subject_id.replace("did:ssw:", ""))
                 self.is_holder = True
                 return True
             except (WalletError, WalletNotFoundError):

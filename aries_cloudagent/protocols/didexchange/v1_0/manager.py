@@ -291,7 +291,7 @@ class DIDXManager(BaseConnectionManager):
         ):
             qualified_did = conn_rec.their_public_did
         else:
-            qualified_did = f"did:sov:{conn_rec.their_public_did}"
+            qualified_did = f"did:ssw:{conn_rec.their_public_did}"
         pthid = conn_rec.invitation_msg_id or qualified_did
         attach = AttachDecorator.data_base64(did_doc.serialize())
         await attach.data.sign(my_info.verkey, wallet)
