@@ -2,8 +2,6 @@
 
 import json
 
-from typing import Mapping, Sequence, Tuple
-
 from aiohttp import web
 from aiohttp_apispec import (
     docs,
@@ -13,6 +11,7 @@ from aiohttp_apispec import (
     response_schema,
 )
 from marshmallow import fields, validate, validates_schema, ValidationError
+from typing import Mapping, Sequence, Tuple
 
 from ....admin.request_context import AdminRequestContext
 from ....connections.models.conn_record import ConnRecord
@@ -502,24 +501,21 @@ async def present_proof_credentials_list(request: web.BaseRequest):
                 input_descriptors.append(InputDescriptors.deserialize(input_desc_dict))
             record_ids = set()
             for input_descriptor in input_descriptors:
-                tag_query = {"$and": []}
                 proof_type = None
+                uri_list = []
                 limit_disclosure = input_descriptor.constraint.limit_disclosure and (
                     input_descriptor.constraint.limit_disclosure == "required"
                 )
                 for schema in input_descriptor.schemas:
-                    tag_query_or_list = []
                     uri = schema.uri
                     if schema.required is None:
                         required = True
                     else:
                         required = schema.required
                     if required:
-                        tag_query_or_list.append({f"type:{uri}": "1"})
-                        tag_query_or_list.append({f"schm:{uri}": "1"})
-                        tag_query["$and"].append({"$or": tag_query_or_list})
-                if len(tag_query["$and"]) == 0:
-                    tag_query = None
+                        uri_list.append(uri)
+                if len(uri_list) == 0:
+                    uri_list = None
                 if limit_disclosure:
                     proof_type = [BbsBlsSignature2020.signature_type]
                 if claim_fmt:
@@ -601,8 +597,8 @@ async def present_proof_credentials_list(request: web.BaseRequest):
                             )
                         )
                 search = dif_holder.search_credentials(
-                    tag_query=tag_query,
                     proof_types=proof_type,
+                    pd_uri_list=uri_list,
                 )
                 records = await search.fetch(count)
                 # Avoiding addition of duplicate records
