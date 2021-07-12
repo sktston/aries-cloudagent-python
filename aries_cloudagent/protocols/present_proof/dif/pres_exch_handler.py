@@ -38,7 +38,6 @@ from ....vc.ld_proofs.constants import (
 )
 from ....vc.vc_ld.prove import sign_presentation, create_presentation, derive_credential
 from ....wallet.base import BaseWallet, DIDInfo
-from ....wallet.error import WalletError, WalletNotFoundError
 from ....wallet.key_type import KeyType
 
 from .pres_exch import (
@@ -100,7 +99,6 @@ class DIFPresExchHandler:
             self.proof_type = Ed25519Signature2018.signature_type
         else:
             self.proof_type = proof_type
-        self.is_holder = False
 
     async def _get_issue_suite(
         self,
@@ -193,7 +191,7 @@ class DIFPresExchHandler:
         else:
             reqd_key_type = KeyType.ED25519
         for cred in applicable_creds:
-            if cred.subject_ids and len(cred.subject_ids) > 0:
+            if len(cred.subject_ids) > 0:
                 if not issuer_id:
                     for cred_subject_id in cred.subject_ids:
                         if not cred_subject_id.startswith("urn:"):
@@ -375,27 +373,13 @@ class DIFPresExchHandler:
                 continue
 
             applicable = False
-            is_holder_field_ids = self.field_ids_for_is_holder(constraints)
             for field in constraints._fields:
                 applicable = await self.filter_by_field(field, credential)
-                # all fields in the constraint should be satisfied
-                if not applicable:
+                if applicable:
                     break
-                # is_holder with required directive requested for this field
-                if applicable and field.id and field.id in is_holder_field_ids:
-                    # Missing credentialSubject.id - cannot verify that holder of claim
-                    # is same as subject
-                    if not credential.subject_ids or len(credential.subject_ids) == 0:
-                        applicable = False
-                        break
-                    # Holder of claim is not same as the subject
-                    if not await self.process_constraint_holders(
-                        subject_ids=credential.subject_ids
-                    ):
-                        applicable = False
-                        break
             if not applicable:
                 continue
+
             if constraints.limit_disclosure == "required":
                 credential_dict = credential.cred_value
                 new_credential_dict = self.reveal_doc(
@@ -416,32 +400,6 @@ class DIFPresExchHandler:
             result.append(credential)
         return result
 
-    def field_ids_for_is_holder(self, constraints: Constraints) -> Sequence[str]:
-        """Return list of field ids for whose subject holder verification is requested."""
-        reqd_field_ids = set()
-        if not constraints.holders:
-            reqd_field_ids = []
-            return reqd_field_ids
-        for holder in constraints.holders:
-            if holder.directive == "required":
-                reqd_field_ids = set.union(reqd_field_ids, set(holder.field_ids))
-        return list(reqd_field_ids)
-
-    async def process_constraint_holders(
-        self,
-        subject_ids: Sequence[str],
-    ) -> bool:
-        """Check if holder or subject of claim still controls the identifier."""
-        async with self.profile.session() as session:
-            wallet = session.inject(BaseWallet)
-            try:
-                for subject_id in subject_ids:
-                    await wallet.get_local_did(subject_id.replace("did:ssw:", ""))
-                self.is_holder = True
-                return True
-            except (WalletError, WalletNotFoundError):
-                return False
-
     def create_vcrecord(self, cred_dict: dict) -> VCRecord:
         """Return VCRecord from a credential dict."""
         proofs = cred_dict.get("proof") or []
@@ -461,8 +419,6 @@ class DIFPresExchHandler:
                     del cred_dict["@graph"]
                     break
         given_id = cred_dict.get("id")
-        if given_id and self.check_if_cred_id_derived(given_id):
-            given_id = str(uuid4())
         # issuer
         issuer = cred_dict.get("issuer")
         if type(issuer) is dict:
@@ -1054,7 +1010,7 @@ class DIFPresExchHandler:
             return {}
 
         nested_result = []
-        cred_uid_descriptors = {}
+        given_id_descriptors = {}
         # recursion logic for nested requirements
         for requirement in req.nested_req:
             # recursive call
@@ -1063,7 +1019,7 @@ class DIFPresExchHandler:
             )
             if result == {}:
                 continue
-            # cred_uid_descriptors maps applicable credentials
+            # given_id_descriptors maps applicable credentials
             # to their respective descriptor.
             # Structure: {cred.given_id: {
             #           desc_id_1: {}
@@ -1074,22 +1030,22 @@ class DIFPresExchHandler:
             for descriptor_id in result.keys():
                 credential_list = result.get(descriptor_id)
                 for credential in credential_list:
-                    cred_id = credential.given_id or credential.record_id
-                    if cred_id:
-                        cred_uid_descriptors.setdefault(cred_id, {})[descriptor_id] = {}
+                    if credential.given_id not in given_id_descriptors:
+                        given_id_descriptors[credential.given_id] = {}
+                    given_id_descriptors[credential.given_id][descriptor_id] = {}
 
             if len(result.keys()) != 0:
                 nested_result.append(result)
 
         exclude = {}
-        for uid in cred_uid_descriptors.keys():
+        for given_id in given_id_descriptors.keys():
             # Check if number of applicable credentials
             # does not meet requirement specification
-            if not self.is_len_applicable(req, len(cred_uid_descriptors[uid])):
-                for descriptor_id in cred_uid_descriptors[uid]:
+            if not self.is_len_applicable(req, len(given_id_descriptors[given_id])):
+                for descriptor_id in given_id_descriptors[given_id]:
                     # Add to exclude dict
-                    # with cred_uid + descriptor_id as key
-                    exclude[descriptor_id + uid] = {}
+                    # with cred.given_id + descriptor_id as key
+                    exclude[descriptor_id + given_id] = {}
         # merging credentials and excluding credentials that don't satisfy the requirement
         return await self.merge_nested_results(
             nested_result=nested_result, exclude=exclude
@@ -1126,22 +1082,20 @@ class DIFPresExchHandler:
         for res in nested_result:
             for key in res.keys():
                 credentials = res[key]
-                uid_dict = {}
+                given_id_dict = {}
                 merged_credentials = []
 
                 if key in result:
                     for credential in result[key]:
-                        cred_id = credential.given_id or credential.record_id
-                        if cred_id and cred_id not in uid_dict:
+                        if credential.given_id not in given_id_dict:
                             merged_credentials.append(credential)
-                            uid_dict[cred_id] = {}
+                            given_id_dict[credential.given_id] = {}
 
                 for credential in credentials:
-                    cred_id = credential.given_id or credential.record_id
-                    if cred_id and cred_id not in uid_dict:
-                        if (key + cred_id) not in exclude:
+                    if credential.given_id not in given_id_dict:
+                        if (key + (credential.given_id)) not in exclude:
                             merged_credentials.append(credential)
-                            uid_dict[cred_id] = {}
+                            given_id_dict[credential.given_id] = {}
                 result[key] = merged_credentials
         return result
 
@@ -1173,22 +1127,11 @@ class DIFPresExchHandler:
         applicable_creds_list = []
         for credential in applicable_creds:
             applicable_creds_list.append(credential.cred_value)
-        if (
-            not self.profile.settings.get("debug.auto_respond_presentation_request")
-            and not records_filter
-            and len(applicable_creds_list) > 1
-        ):
-            raise DIFPresExchError(
-                "Multiple credentials are applicable for presentation_definition "
-                f"{pd.id} and --auto-respond-presentation-request setting is not "
-                "enabled. Please specify which credentials should be applied to "
-                "which input_descriptors using record_ids filter."
-            )
         # submission_property
         submission_property = PresentationSubmission(
             id=str(uuid4()), definition_id=pd.id, descriptor_maps=descriptor_maps
         )
-        if self.is_holder:
+        if self.check_sign_pres(applicable_creds):
             (
                 issuer_id,
                 filtered_creds_list,
@@ -1241,10 +1184,13 @@ class DIFPresExchHandler:
             else:
                 return vp
 
-    def check_if_cred_id_derived(self, id: str) -> bool:
-        """Check if credential or credentialSubjet id is derived."""
-        if id.startswith("urn:bnid:_:c14n"):
-            return True
+    def check_sign_pres(self, creds: Sequence[VCRecord]) -> bool:
+        """Check if applicable creds have CredentialSubject.id set."""
+        for cred in creds:
+            if len(cred.subject_ids) > 0 and not next(
+                iter(cred.subject_ids)
+            ).startswith("urn:"):
+                return True
         return False
 
     async def merge(
@@ -1272,129 +1218,19 @@ class DIFPresExchHandler:
         for desc_id in sorted_desc_keys:
             credentials = dict_descriptor_creds.get(desc_id)
             for cred in credentials:
-                cred_id = cred.given_id or cred.record_id
-                if cred_id:
-                    if cred_id not in dict_of_creds:
-                        result.append(cred)
-                        dict_of_creds[cred_id] = len(descriptors)
-                    if f"{cred_id}-{cred_id}" not in dict_of_descriptors:
-                        descriptor_map = InputDescriptorMapping(
-                            id=desc_id,
-                            fmt="ldp_vp",
-                            path=(f"$.verifiableCredential[{dict_of_creds[cred_id]}]"),
-                        )
-                        descriptors.append(descriptor_map)
+                if cred.given_id not in dict_of_creds:
+                    result.append(cred)
+                    dict_of_creds[cred.given_id] = len(descriptors)
+
+                if f"{cred.given_id}-{cred.given_id}" not in dict_of_descriptors:
+                    descriptor_map = InputDescriptorMapping(
+                        id=desc_id,
+                        fmt="ldp_vp",
+                        path=(
+                            f"$.verifiableCredential[{dict_of_creds[cred.given_id]}]"
+                        ),
+                    )
+                    descriptors.append(descriptor_map)
 
         descriptors = sorted(descriptors, key=lambda i: i.id)
         return (result, descriptors)
-
-    async def verify_received_pres(
-        self,
-        pd: PresentationDefinition,
-        pres: dict,
-    ):
-        """
-        Verify credentials received in presentation.
-
-        Args:
-            pres: received VerifiablePresentation
-            pd: PresentationDefinition
-        """
-        descriptor_map_list = pres.get("presentation_submission").get("descriptor_map")
-        input_descriptors = pd.input_descriptors
-        inp_desc_id_contraint_map = {}
-        for input_descriptor in input_descriptors:
-            inp_desc_id_contraint_map[input_descriptor.id] = input_descriptor.constraint
-        for desc_map_item in descriptor_map_list:
-            desc_map_item_id = desc_map_item.get("id")
-            constraint = inp_desc_id_contraint_map.get(desc_map_item_id)
-            desc_map_item_path = desc_map_item.get("path")
-            jsonpath = parse(desc_map_item_path)
-            match = jsonpath.find(pres)
-            if len(match) == 0:
-                raise DIFPresExchError(
-                    f"{desc_map_item_path} path in descriptor_map not applicable"
-                )
-            for match_item in match:
-                if not await self.apply_constraint_received_cred(
-                    constraint, match_item.value
-                ):
-                    raise DIFPresExchError(
-                        f"Constraint specified for {desc_map_item_id} does not "
-                        f"apply to the enclosed credential in {desc_map_item_path}"
-                    )
-
-    async def apply_constraint_received_cred(
-        self, constraint: Constraints, cred_dict: dict
-    ) -> bool:
-        """Evaluate constraint from the request against received credential."""
-        fields = constraint._fields
-        field_paths = []
-        credential = self.create_vcrecord(cred_dict)
-        for field in fields:
-            field_paths = field_paths + field.paths
-            if not await self.filter_by_field(field, credential):
-                return False
-        # Selective Disclosure check
-        if constraint.limit_disclosure == "required":
-            field_paths = set([path.replace("$.", "") for path in field_paths])
-            mandatory_paths = {
-                "@context",
-                "type",
-                "issuanceDate",
-                "issuer",
-                "proof",
-                "credentialSubject",
-                "id",
-            }
-            to_remove_from_field_paths = set()
-            nested_field_paths = {"credentialSubject": {"id", "type"}}
-            for field_path in field_paths:
-                if field_path.count(".") >= 1:
-                    split_field_path = field_path.split(".")
-                    key = ".".join(split_field_path[:-1])
-                    value = split_field_path[-1]
-                    nested_field_paths = self.build_nested_paths_dict(
-                        key, value, nested_field_paths
-                    )
-                    to_remove_from_field_paths.add(field_path)
-            for to_remove_path in to_remove_from_field_paths:
-                field_paths.remove(to_remove_path)
-
-            field_paths = set.union(mandatory_paths, field_paths)
-
-            for attrs in cred_dict.keys():
-                if attrs not in field_paths:
-                    return False
-            for nested_attr_key in nested_field_paths:
-                nested_attr_values = nested_field_paths[nested_attr_key]
-                split_nested_attr_key = nested_attr_key.split(".")
-                extracted_dict = self.nested_get(cred_dict, split_nested_attr_key)
-                for attrs in extracted_dict.keys():
-                    if attrs not in nested_attr_values:
-                        return False
-        return True
-
-    def nested_get(self, input_dict: dict, nested_key: Sequence[str]) -> dict:
-        """Return internal dict from nested input_dict given list of nested_key."""
-        internal_dict_value = input_dict
-        for k in nested_key:
-            internal_dict_value = internal_dict_value.get(k, None)
-        return internal_dict_value
-
-    def build_nested_paths_dict(
-        self, key: str, value: str, nested_field_paths: dict
-    ) -> dict:
-        """Build and return nested_field_paths dict."""
-        if key in nested_field_paths.keys():
-            nested_field_paths[key].add(value)
-        else:
-            nested_field_paths[key] = {value}
-        split_key = key.split(".")
-        if len(split_key) > 1:
-            nested_field_paths.update(
-                self.build_nested_paths_dict(
-                    ".".join(split_key[:-1]), split_key[-1], nested_field_paths
-                )
-            )
-        return nested_field_paths

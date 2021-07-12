@@ -10,12 +10,10 @@ RUN apt-get update -y && \
 
 WORKDIR /usr/src/app
 
-ADD requirements*.txt ./
+ADD requirements.txt requirements.dev.txt ./
 
 RUN pip3 install --no-cache-dir \
 	-r requirements.txt \
-	-r requirements.askar.txt \
-	-r requirements.bbs.txt \
 	-r requirements.dev.txt
 
 ADD . .

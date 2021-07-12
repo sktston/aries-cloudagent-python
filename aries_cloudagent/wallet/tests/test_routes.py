@@ -380,7 +380,9 @@ class TestWalletRoutes(AsyncTestCase):
                 KeyType.ED25519,
             )
             result = await test_module.wallet_set_public_did(self.request)
-            self.wallet.set_public_did.assert_awaited_once()
+            self.wallet.set_public_did.assert_awaited_once_with(
+                self.request.query["did"]
+            )
             json_response.assert_called_once_with(
                 {
                     "result": {
@@ -531,7 +533,9 @@ class TestWalletRoutes(AsyncTestCase):
                 KeyType.ED25519,
             )
             result = await test_module.wallet_set_public_did(self.request)
-            self.wallet.set_public_did.assert_awaited_once()
+            self.wallet.set_public_did.assert_awaited_once_with(
+                self.request.query["did"]
+            )
             json_response.assert_called_once_with(
                 {
                     "result": {
@@ -571,7 +575,9 @@ class TestWalletRoutes(AsyncTestCase):
             self.wallet.get_local_did.return_value = did_info
             self.wallet.set_public_did.return_value = did_info
             result = await test_module.wallet_set_public_did(self.request)
-            self.wallet.set_public_did.assert_awaited_once()
+            self.wallet.set_public_did.assert_awaited_once_with(
+                self.request.query["did"]
+            )
             self.wallet.set_did_endpoint.assert_awaited_once_with(
                 did_info.did, "https://default_endpoint.com", ledger
             )

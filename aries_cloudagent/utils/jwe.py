@@ -112,10 +112,7 @@ class JweEnvelope:
     @classmethod
     def from_json(cls, message: Union[bytes, str]) -> "JweEnvelope":
         """Decode a JWE envelope from a JSON string or bytes value."""
-        try:
-            return cls._deserialize(JweSchema().loads(message))
-        except json.JSONDecodeError:
-            raise ValidationError("Invalid JWE: not JSON")
+        return cls._deserialize(JweSchema().loads(message))
 
     @classmethod
     def deserialize(cls, message: Mapping[str, Any]) -> "JweEnvelope":

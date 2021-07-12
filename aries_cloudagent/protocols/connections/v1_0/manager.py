@@ -12,15 +12,12 @@ from ....connections.models.connection_target import ConnectionTarget
 from ....connections.util import mediation_record_if_id
 from ....core.error import BaseError
 from ....core.profile import ProfileSession
-from ....ledger.base import BaseLedger
-from ....ledger.error import LedgerTransactionError, BadLedgerRequestError, LedgerError
 from ....messaging.responder import BaseResponder
 from ....storage.error import StorageError, StorageNotFoundError
 from ....transport.inbound.receipt import MessageReceipt
 from ....wallet.base import BaseWallet
 from ....wallet.did_info import DIDInfo
 from ....wallet.crypto import create_keypair, seed_to_did
-from ....wallet.did_posture import DIDPosture
 from ....wallet.key_type import KeyType
 from ....wallet.did_method import DIDMethod
 from ....wallet.error import WalletNotFoundError
@@ -31,7 +28,6 @@ from ...coordinate_mediation.v1_0.manager import MediationManager
 
 from ...coordinate_mediation.v1_0.models.mediation_record import MediationRecord
 
-from .message_types import ARIES_PROTOCOL as CONN_PROTO
 from .messages.connection_invitation import ConnectionInvitation
 from .messages.connection_request import ConnectionRequest
 from .messages.connection_response import ConnectionResponse
@@ -151,26 +147,6 @@ class ConnectionManager(BaseConnectionManager):
                     "Cannot create public invitation with no public DID"
                 )
 
-            # FIXME: Add posted metadata for issuers that not called register_nym
-            # this routine needs run just once.
-            # therefore, it will be removed later
-            if not public_did.metadata.get("posted"):
-                ledger = self._session.inject(BaseLedger, required=False)
-                if not ledger:
-                    raise ConnectionManagerError(
-                        "Cannot create public invitation with not posted public DID"
-                    )
-                async with ledger:
-                    try:
-                        await ledger.get_nym_role(public_did.did)
-                    except (LedgerTransactionError, BadLedgerRequestError, LedgerError):
-                        raise ConnectionManagerError(
-                            "Cannot create public invitation with not posted public DID"
-                        )
-                did_metadata = {**public_did.metadata, **DIDPosture.POSTED.metadata}
-                await wallet.replace_local_did_metadata(public_did.did, did_metadata)
-            # until here
-
             if multi_use:
                 raise ConnectionManagerError(
                     "Cannot use public and multi_use at the same time"
@@ -238,7 +214,6 @@ class ConnectionManager(BaseConnectionManager):
             accept=accept,
             invitation_mode=invitation_mode,
             alias=alias,
-            connection_protocol=CONN_PROTO,
         )
 
         await connection.save(self._session, reason="Created new invitation")
@@ -339,13 +314,11 @@ class ConnectionManager(BaseConnectionManager):
         connection = ConnRecord(
             invitation_key=invitation.recipient_keys and invitation.recipient_keys[0],
             their_label=invitation.label,
-            invitation_msg_id=invitation._id,
             their_role=ConnRecord.Role.RESPONDER.rfc160,
             state=ConnRecord.State.INVITATION.rfc160,
             accept=accept,
             alias=alias,
             their_public_did=their_public_did,
-            connection_protocol=CONN_PROTO,
         )
 
         await connection.save(
@@ -543,7 +516,6 @@ class ConnectionManager(BaseConnectionManager):
                     state=ConnRecord.State.INVITATION.rfc160,
                     accept=connection.accept,
                     their_role=connection.their_role,
-                    connection_protocol=CONN_PROTO,
                 )
 
                 await new_connection.save(
@@ -612,7 +584,6 @@ class ConnectionManager(BaseConnectionManager):
                     else ConnRecord.ACCEPT_MANUAL
                 ),
                 state=ConnRecord.State.REQUEST.rfc160,
-                connection_protocol=CONN_PROTO,
             )
 
             await connection.save(
@@ -935,7 +906,6 @@ class ConnectionManager(BaseConnectionManager):
             their_label=their_label,
             state=ConnRecord.State.COMPLETED.rfc160,
             alias=alias,
-            connection_protocol=CONN_PROTO,
         )
         await connection.save(self._session, reason="Created new static connection")
 
@@ -1086,7 +1056,7 @@ class ConnectionManager(BaseConnectionManager):
                     receipt.recipient_verkey
                 )
                 receipt.recipient_did = my_info.did
-                if "posted" in my_info.metadata and my_info.metadata["posted"] is True:
+                if "public" in my_info.metadata and my_info.metadata["public"] is True:
                     receipt.recipient_did_public = True
             except InjectionError:
                 self._logger.warning(

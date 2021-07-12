@@ -234,29 +234,14 @@ def progress(*args, **kwargs):
     return ProgressBar(*args, **kwargs)
 
 
-def check_requires(args):
-    wtype = args.wallet_type or "indy"
+def require_indy():
+    try:
+        from indy.libindy import _cdll
 
-    if wtype == "indy":
-        try:
-            from indy.libindy import _cdll
-
-            _cdll()
-        except ImportError:
-            print("python3-indy module not installed")
-            sys.exit(1)
-        except OSError:
-            print("libindy shared library could not be loaded")
-            sys.exit(1)
-
-    elif wtype == "askar":
-        try:
-            from aries_askar.bindings import get_library
-
-            get_library()
-        except ImportError:
-            print("aries-askar module not installed")
-            sys.exit(1)
-        except OSError:
-            print("askar shared library could not be loaded")
-            sys.exit(1)
+        _cdll()
+    except ImportError:
+        print("python3-indy module not installed")
+        sys.exit(1)
+    except OSError:
+        print("libindy shared library could not be loaded")
+        sys.exit(1)
