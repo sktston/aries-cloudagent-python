@@ -285,22 +285,22 @@ class LDProofCredFormatHandler(V20CredFormatHandler):
         did_info: DIDInfo = None,
     ):
         """Get signature suite for issuance of verification."""
-        async with self.profile.session() as session:
-            wallet = session.inject(BaseWallet)
+        session = await self.profile.session()
+        wallet = session.inject(BaseWallet)
 
-            # Get signature class based on proof type
-            SignatureClass = PROOF_TYPE_SIGNATURE_SUITE_MAPPING[proof_type]
+        # Get signature class based on proof type
+        SignatureClass = PROOF_TYPE_SIGNATURE_SUITE_MAPPING[proof_type]
 
-            # Generically create signature class
-            return SignatureClass(
-                verification_method=verification_method,
-                proof=proof,
-                key_pair=WalletKeyPair(
-                    wallet=wallet,
-                    key_type=SIGNATURE_SUITE_KEY_TYPE_MAPPING[SignatureClass],
-                    public_key_base58=did_info.verkey if did_info else None,
-                ),
-            )
+        # Generically create signature class
+        return SignatureClass(
+            verification_method=verification_method,
+            proof=proof,
+            key_pair=WalletKeyPair(
+                wallet=wallet,
+                key_type=SIGNATURE_SUITE_KEY_TYPE_MAPPING[SignatureClass],
+                public_key_base58=did_info.verkey if did_info else None,
+            ),
+        )
 
     def _get_verification_method(self, did: str):
         """Get the verification method for a did."""
@@ -353,13 +353,19 @@ class LDProofCredFormatHandler(V20CredFormatHandler):
                 f"Supported  proof types are: {SUPPORTED_ISSUANCE_PROOF_PURPOSES}"
             )
 
-    async def _prepare_detail(self, detail: LDProofVCDetail) -> LDProofVCDetail:
+    async def _prepare_detail(
+        self, detail: LDProofVCDetail, holder_did: str = None
+    ) -> LDProofVCDetail:
         # Add BBS context if not present yet
         if (
             detail.options.proof_type == BbsBlsSignature2020.signature_type
             and SECURITY_CONTEXT_BBS_URL not in detail.credential.context_urls
         ):
             detail.credential.add_context(SECURITY_CONTEXT_BBS_URL)
+
+        # add holder_did as credentialSubject.id (if provided)
+        if holder_did and holder_did.startswith("did:key"):
+            detail.credential.credential_subject["id"] = holder_did
 
         return detail
 
@@ -410,6 +416,8 @@ class LDProofCredFormatHandler(V20CredFormatHandler):
         self, cred_ex_record: V20CredExRecord, request_data: Mapping = None
     ) -> CredFormatAttachment:
         """Create linked data proof credential request."""
+        holder_did = request_data.get("holder_did") if request_data else None
+
         if cred_ex_record.cred_offer:
             request_data = cred_ex_record.cred_offer.attachment(
                 LDProofCredFormatHandler.format
@@ -426,7 +434,7 @@ class LDProofCredFormatHandler(V20CredFormatHandler):
             )
 
         detail = LDProofVCDetail.deserialize(request_data)
-        detail = await self._prepare_detail(detail)
+        detail = await self._prepare_detail(detail, holder_did=holder_did)
 
         return self.get_format_data(CRED_20_REQUEST, detail.serialize())
 
