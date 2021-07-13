@@ -5,7 +5,6 @@ import json
 import logging
 import tempfile
 from datetime import date, datetime
-from hashlib import sha256
 from os import path
 from time import time
 from typing import Sequence, Tuple
@@ -1094,13 +1093,6 @@ class IndySdkLedger(BaseLedger):
         """
         return int(datetime.combine(date.today(), datetime.min.time()).timestamp())
 
-    def taa_digest(self, version: str, text: str):
-        """Generate the digest of a TAA record."""
-        if not version or not text:
-            raise ValueError("Bad input for TAA digest")
-        taa_plaintext = version + text
-        return sha256(taa_plaintext.encode("utf-8")).digest().hex()
-
     async def accept_txn_author_agreement(
         self, taa_record: dict, mechanism: str, accept_time: int = None
     ):
@@ -1209,7 +1201,7 @@ class IndySdkLedger(BaseLedger):
 
     async def get_revoc_reg_delta(
         self, revoc_reg_id: str, fro=0, to=None
-    ) -> (dict, int):
+    ) -> Tuple[dict, int]:
         """
         Look up a revocation registry delta by ID.
 
